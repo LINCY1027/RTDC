@@ -326,6 +326,7 @@
     const btnUndo = document.getElementById('uiBtnUndo');
 
     let db, inspectionRecords = [], currentZoom = 1, currentDirKey = "none", touchStartY = 0, currentDeltaY = 0, isPulling = false;
+    
     let mapIsOpen = false, mapZoom = 1, mapPanX = 0, mapPanY = 0;
     let isMapDragging = false, mapStartX = 0, mapStartY = 0, initialPinchDist = null, initialZoom = 1;
 
@@ -485,9 +486,6 @@
     function openHelp() { document.getElementById('helpModal').style.display = 'flex'; }
     function closeHelp() { document.getElementById('helpModal').style.display = 'none'; }
 
-    // ==========================================
-    // 🗺️ 平面圖引擎 (外圍引線排版)
-    // ==========================================
     function getDistance(touches) {
         const dx = touches[0].clientX - touches[1].clientX;
         const dy = touches[0].clientY - touches[1].clientY;
@@ -517,7 +515,7 @@
             const newDist = getDistance(e.touches);
             mapZoom = initialZoom * (newDist / initialPinchDist);
             if (mapZoom < 0.5) mapZoom = 0.5;
-            if (mapZoom > 5) mapZoom = 5;
+            if (mapZoom > 10) mapZoom = 10;
             renderMap();
         }
     }
@@ -532,7 +530,7 @@
         const zoomAmount = e.deltaY * -0.001;
         mapZoom += zoomAmount;
         if (mapZoom < 0.5) mapZoom = 0.5;
-        if (mapZoom > 5) mapZoom = 5;
+        if (mapZoom > 10) mapZoom = 10;
         renderMap();
     }
 
@@ -576,7 +574,6 @@
         await drawMapOnCanvas(cvs, selectedFloor, dpr, theme);
     }
 
-    // 核心繪製邏輯
     async function drawMapOnCanvas(cvs, selectedFloor, dpr, theme) {
         const ctx = cvs.getContext('2d');
         ctx.clearRect(0, 0, cvs.width, cvs.height);
@@ -625,9 +622,13 @@
         let gridW = maxX - minX; if(gridW === 0) gridW = 2;
         let gridH = maxY - minY; if(gridH === 0) gridH = 2;
 
-        // 🚀 關鍵更新：將邊距拉大，預留空間給外部照片
-        const pad = 200 * dpr; 
-        const drawW = cvs.width - pad * 2, drawH = cvs.height - pad * 2;
+        // 🚀 動態修改邊距：手機預覽時邊距縮小，Excel高畫質匯出時給足邊距
+        const padX = isExport ? 250 * dpr : cvs.width * 0.1; 
+        const padY = isExport ? 250 * dpr : cvs.height * 0.15;
+        
+        let drawW = Math.max(cvs.width * 0.2, cvs.width - padX * 2);
+        let drawH = Math.max(cvs.height * 0.2, cvs.height - padY * 2);
+        
         const baseScale = Math.min(drawW / gridW, drawH / gridH); 
         
         let z = isExport ? 1 : mapZoom;
@@ -644,7 +645,6 @@
 
         function getScreenPt(x, y) { return { sx: cx + (x - minX) * baseScale, sy: cy + (y - minY) * baseScale }; }
 
-        // 1. 畫網格
         ctx.strokeStyle = gridLineColor; ctx.lineWidth = (2 * dpr) / z; ctx.beginPath();
         for(let x = Math.floor(minX); x <= Math.ceil(maxX); x++) {
             let p1 = getScreenPt(x, minY); let p2 = getScreenPt(x, maxY);
@@ -656,7 +656,6 @@
         }
         ctx.stroke();
 
-        // 2. 畫柱子與座標
         let colSizeRender = baseScale * (customColSize / customSpan); 
         ctx.fillStyle = columnColor;
         for(let x = Math.floor(minX); x <= Math.ceil(maxX); x++) {
@@ -681,18 +680,15 @@
             }
         }
 
-        // 3. 預先載入影像
         for (let pt of points) {
             pt.imgObj = await loadImageAsync(pt.img);
             pt.screen = getScreenPt(pt.x, pt.y);
         }
 
-        // 4. 🚀 智慧螺旋排版 (將圖片推向網格外部)
-        const imgW = 80 * dpr / z; 
-        const imgH = 60 * dpr / z;
+        const imgW = isExport ? 160 * dpr / z : 80 * dpr / z; 
+        const imgH = isExport ? 120 * dpr / z : 60 * dpr / z;
         const boxes = [];
         
-        // 定義平面圖的絕對網格範圍 (含一點緩衝)
         const gridBox = {
             x: cx - (30 * dpr / z),
             y: cy - (30 * dpr / z),
@@ -701,14 +697,12 @@
         };
 
         function checkCollision(box) {
-            // 避免壓到平面圖網格
             if (box.x < gridBox.x + gridBox.w &&
                 box.x + box.w > gridBox.x &&
                 box.y < gridBox.y + gridBox.h &&
                 box.y + box.h > gridBox.y) {
                 return true;
             }
-            // 避免照片互相重疊
             for(let b of boxes) {
                 if (box.x < b.x + b.w + (15*dpr/z) &&
                     box.x + box.w + (15*dpr/z) > b.x &&
@@ -721,11 +715,11 @@
         }
 
         for (let pt of points) {
-            let r = 0; // 從原點開始向外探索
+            let r = 0; 
             let angle = 0;
             let placed = false;
             let bestBox = null;
-            let spiralStep = 8 * dpr / z; 
+            let spiralStep = 10 * dpr / z; 
 
             while (!placed && r < 5000 * dpr) {
                 let tx = pt.screen.sx + r * Math.cos(angle);
@@ -743,7 +737,6 @@
             if (bestBox) {
                 boxes.push(bestBox);
                 
-                // 畫引線 (紅色、微透明)
                 ctx.beginPath();
                 ctx.moveTo(pt.screen.sx, pt.screen.sy);
                 ctx.lineTo(bestBox.x + bestBox.w/2, bestBox.y + bestBox.h/2);
@@ -751,16 +744,13 @@
                 ctx.lineWidth = 1.5 * dpr / z;
                 ctx.stroke();
 
-                // 畫中心缺失紅點
                 ctx.beginPath(); ctx.arc(pt.screen.sx, pt.screen.sy, (5 * dpr)/z, 0, Math.PI * 2);
                 ctx.fillStyle = '#FF3B30'; ctx.fill();
                 ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = (1.5 * dpr)/z; ctx.stroke();
 
-                // 畫照片底框
                 ctx.fillStyle = '#FF3B30';
                 ctx.fillRect(bestBox.x - (2*dpr/z), bestBox.y - (2*dpr/z), bestBox.w + (4*dpr/z), bestBox.h + (4*dpr/z));
 
-                // 畫照片縮圖
                 if (pt.imgObj) {
                     ctx.drawImage(pt.imgObj, bestBox.x, bestBox.y, bestBox.w, bestBox.h);
                 } else {
@@ -768,12 +758,12 @@
                     ctx.fillRect(bestBox.x, bestBox.y, bestBox.w, bestBox.h);
                 }
 
-                // 畫編號標籤
-                const labelH = 14 * dpr / z;
+                const labelH = isExport ? 20 * dpr / z : 14 * dpr / z;
+                const fontSize = isExport ? 16 * dpr / z : 11 * dpr / z;
                 ctx.fillStyle = '#FF3B30';
                 ctx.fillRect(bestBox.x - (2*dpr/z), bestBox.y - labelH - (2*dpr/z), bestBox.w + (4*dpr/z), labelH + (2*dpr/z));
                 ctx.fillStyle = '#FFFFFF';
-                ctx.font = `bold ${(11 * dpr)/z}px sans-serif`;
+                ctx.font = `bold ${fontSize}px sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'top';
                 ctx.fillText(`No.${pt.num}`, bestBox.x + bestBox.w/2, bestBox.y - labelH);
@@ -934,15 +924,14 @@
                 sheet.addImage(imageId, { tl: { col: 1, row: rowIndex - 1 }, ext: { width: 200, height: 150 }, editAs: 'oneCell' });
             }
 
-            // --- 🚀 Excel 自動鑲嵌各樓層平面圖 ---
             let floors = [...new Set(inspectionRecords.map(r => r.floor).filter(f => f && f !== '-'))].sort();
             if(floors.length === 0) floors.push('all');
 
             for (let f of floors) {
                 const offCvs = document.createElement('canvas');
-                offCvs.width = 2400; offCvs.height = 1800; // 高畫質渲染
+                offCvs.width = 2400; offCvs.height = 1800; 
                 
-                await drawMapOnCanvas(offCvs, f, 2, 'light_export'); // 強制白底匯出
+                await drawMapOnCanvas(offCvs, f, 2, 'light_export'); 
                 
                 const mapDataUrl = offCvs.toDataURL('image/jpeg', 0.85);
                 const safeName = f === 'all' ? txt.mapAllFloors : `L${f}`;
@@ -1013,7 +1002,6 @@
         container.innerHTML = html;
         document.body.appendChild(container);
 
-        const originalBtnText = exportBtn.innerText;
         exportBtn.innerText = txt.ptrLoading;
         exportBtn.disabled = true;
 
