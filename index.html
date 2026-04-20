@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" id="themeColorMeta" content="#000000">
     <title>RTDC工程相機</title>
     
@@ -20,135 +20,155 @@
             --input-border: #3a3a3c;
             --seg-active: #636366;
             --modal-bg: #2c2c2e;
+            --ios-blue: #007AFF;
         }
 
         body.light-theme {
             color-scheme: light; 
-            --bg-main: #e5e5ea;
+            --bg-main: #f2f2f7; 
             --bg-panel: #ffffff;
             --text-main: #000000;
             --text-muted: #666666;
             --input-bg: #f2f2f7;
             --input-border: #d1d1d6;
             --seg-active: #ffffff;
-            --modal-bg: #f2f2f7;
+            --modal-bg: rgba(255,255,255,0.95);
         }
 
-        option { background-color: var(--input-bg); color: var(--text-main); }
-
+        /* 終極防爆屏設定 */
         body { 
-            font-family: "微軟正黑體", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            margin: 0; padding: 0; background: var(--bg-main); color: var(--text-main); 
-            user-select: none; display: flex; flex-direction: column; height: 100dvh; 
-            width: 100vw; max-width: 100%; overflow-x: hidden; 
-            overscroll-behavior-y: none; transition: background 0.4s ease;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "微軟正黑體", sans-serif; 
+            margin: 0; padding: 0; background: #000; color: var(--text-main); 
+            user-select: none; 
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+            width: 100vw; height: 100dvh; 
+            overflow: hidden; overscroll-behavior: none; 
         }
 
-        #ptrIndicator { position: absolute; top: 0; left: 0; width: 100%; height: 70px; display: flex; justify-content: center; align-items: center; color: var(--text-muted); font-size: 14px; font-weight: bold; z-index: 1; }
-
-        #appContainer { display: flex; flex-direction: column; height: 100dvh; width: 100vw; position: relative; z-index: 2; background: var(--bg-main); animation: appFadeIn 0.5s ease-out; transition: background 0.4s ease; }
+        #appContainer { display: flex; flex-direction: column; width: 100%; height: 100%; position: relative; z-index: 2; animation: appFadeIn 0.3s ease-out; }
         @keyframes appFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        #cameraSection { flex: 1; position: relative; background: #000; display: flex; align-items: center; justify-content: center; width: 100%; }
-        .top-bar { position: absolute; top: 15px; width: 100%; padding: 0 15px; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; z-index: 20; }
+        /* 相機區域：填滿剩餘高度，徹底移除 video-container 避免排版干擾 */
+        #cameraSection { 
+            flex: 1 1 auto; min-height: 0; 
+            position: relative; background: #000; 
+            overflow: hidden; width: 100%;
+        }
         
-        .fab-settings { background: rgba(0, 0, 0, 0.4); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 15px; font-size: 15px; font-weight: bold; border-radius: 20px; backdrop-filter: blur(8px); cursor: pointer; transition: transform 0.2s; }
-        .fab-settings:active { transform: scale(0.92); }
+        #videoElement { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            object-fit: cover; z-index: 1; 
+        }
         
+        #displayOverlay { 
+            position: absolute; left: 0; width: 100%; 
+            background: rgba(0, 0, 0, 0.6); padding: 10px 15px; box-sizing: border-box; 
+            font-weight: bold; pointer-events: none; line-height: 1.4; word-wrap: break-word; 
+            z-index: 10; 
+        }
+
+        .top-bar { position: absolute; top: 15px; left: 0; width: 100%; padding: 0 15px; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; z-index: 20; }
+        .fab-settings { background: rgba(0, 0, 0, 0.6); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 16px; font-size: 15px; font-weight: 600; border-radius: 20px; backdrop-filter: blur(10px); cursor: pointer; }
         .export-group { display: flex; gap: 8px; }
-        .export-btn { background: #FF3B30; color: #fff; border: none; padding: 8px 12px; font-size: 14px; font-weight: bold; border-radius: 12px; cursor: pointer; transition: 0.2s; }
-        .export-btn.excel { background: #107c41; color: #fff; } 
+        .export-btn { background: #FF3B30; color: #fff; border: none; padding: 8px 12px; font-size: 14px; font-weight: bold; border-radius: 12px; cursor: pointer; }
+        .export-btn.excel { background: #107c41; } 
         .export-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
-        .video-container { width: 100%; aspect-ratio: 4 / 3; background: #111; position: relative; overflow: hidden; }
-        #videoElement { width: 100%; height: 100%; object-fit: cover; }
+        /* 控制台：零圓角，完美水平切割 */
+        #controlPanel { 
+            flex-shrink: 0; 
+            background: var(--bg-panel); padding: 15px; box-sizing: border-box; 
+            display: flex; flex-direction: column; gap: 12px; z-index: 30; 
+            border-top: 1px solid var(--input-border);
+            border-radius: 0; 
+        }
 
-        #displayOverlay { position: absolute; left: 0; width: 100%; background: rgba(0, 0, 0, 0.5); padding: 8px 10px; box-sizing: border-box; font-weight: bold; pointer-events: none; line-height: 1.4; transition: top 0.4s, bottom 0.4s; word-wrap: break-word; white-space: normal; }
-
-        #controlPanel { background: var(--bg-panel); border-radius: 0; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 -4px 20px rgba(0,0,0,0.3); z-index: 30; animation: panelSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
-        @keyframes panelSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-        .pos-input-row { display: flex; gap: 8px; width: 100%; }
-        .prefix-box, .axis-box { display: flex; align-items: center; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 8px; transition: 0.3s; }
-        .prefix-box { flex: 1; } .axis-box { flex: 2; justify-content: center; }
-        .prefix-box .prefix { padding-left: 10px; font-weight: bold; color: #007AFF; font-size: 16px; }
-        .prefix-box input, .axis-box input { flex: 1; width: 0; min-width: 0; background: transparent; color: var(--text-main); border: none; padding: 12px 0; font-size: 16px; font-weight: bold; outline: none; text-align: center !important; }
-        .prefix-box input { padding-left: 5px; text-align: left !important; }
-        .axis-box .pos-separator { font-size: 18px; font-weight: bold; color: var(--text-muted); margin: 0 5px; }
+        .pos-input-row { display: flex; gap: 8px; }
+        .prefix-box, .axis-box { display: flex; align-items: center; background: var(--input-bg); border-radius: 10px; flex: 1; height: 44px; }
+        .axis-box { flex: 1.5; justify-content: center; }
+        .prefix-box .prefix { padding-left: 12px; font-weight: bold; color: var(--ios-blue); font-size: 16px; }
+        .prefix-box input, .axis-box input { flex: 1; background: transparent; color: var(--text-main); border: none; font-size: 16px; font-weight: 600; outline: none; text-align: center; }
+        .prefix-box input { padding-left: 5px; text-align: left; }
         #posEng { text-transform: uppercase; }
 
-        .remark-input { width: 100%; background: var(--input-bg); color: var(--text-main); border: 1px solid var(--input-border); padding: 10px; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; outline: none; }
+        .remark-input { width: 100%; height: 44px; background: var(--input-bg); color: var(--text-main); border: none; border-radius: 10px; font-size: 16px; font-weight: 600; text-align: center; outline: none; box-sizing: border-box; }
 
-        .segmented-control { display: flex; background: var(--input-bg); border-radius: 8px; padding: 4px; gap: 4px; }
-        .seg-btn { flex: 1; border: none; background: transparent; padding: 8px 0; font-size: 14px; border-radius: 6px; cursor: pointer; color: var(--text-main); font-weight: bold; transition: 0.3s; }
-        .seg-btn.active { background: var(--seg-active); color: #FFD60A; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .light-theme .seg-btn.active { color: #007AFF; }
+        .segmented-control { display: flex; background: var(--input-bg); border-radius: 8px; padding: 2px; gap: 2px; height: 32px; align-items: center; }
+        .seg-btn { flex: 1; border: none; background: transparent; color: var(--text-main); font-size: 13px; font-weight: 600; border-radius: 7px; height: 100%; cursor: pointer; transition: 0.1s; }
+        .seg-btn.active { background: var(--seg-active); color: var(--ios-blue); box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+        .light-theme .seg-btn.active { background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 
-        .zoom-row { display: flex; align-items: center; justify-content: center; gap: 15px; color: var(--text-muted); font-size: 14px; }
-        input[type=range] { flex: 1; accent-color: #FFD60A; }
+        .zoom-row { display: flex; align-items: center; justify-content: center; gap: 15px; color: var(--text-muted); font-size: 14px; font-weight: 600; }
+        input[type=range] { flex: 1; accent-color: var(--ios-blue); height: 28px; }
         
-        .shutter-row { display: flex; justify-content: center; align-items: center; position: relative; margin-top: 5px; height: 65px; }
-        .side-btn { 
-            position: absolute; height: 40px; padding: 0 15px; border-radius: 20px; 
-            background: var(--input-bg); border: 1px solid var(--input-border); 
-            color: var(--text-main); font-size: 14px; font-weight: bold; 
-            cursor: pointer; display: flex; justify-content: center; align-items: center; 
-            transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
-        }
-        .side-btn.left { left: 10px; }
-        .side-btn.right { right: 10px; }
-        .side-btn:active { transform: scale(0.9); background: var(--seg-active); }
-        .side-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+        /* 底部快門區域：向中靠攏設計 */
+        .shutter-row { display: flex; justify-content: center; align-items: center; gap: 35px; height: 75px; margin-top: 5px; }
+        .side-btn { height: 44px; padding: 0 22px; border-radius: 22px; background: var(--input-bg); border: none; color: var(--text-main); font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .side-btn:active { transform: scale(0.95); background: var(--input-border); }
+        .side-btn:disabled { opacity: 0.3; cursor: not-allowed; }
         
-        .shutter-btn { width: 65px; height: 65px; border-radius: 50%; background: white; border: 4px solid #8e8e93; cursor: pointer; box-shadow: 0 0 0 4px white inset; transition: transform 0.15s; }
-        .shutter-btn:active { transform: scale(0.88); }
+        .shutter-btn { width: 72px; height: 72px; border-radius: 50%; background: white; border: 4px solid #fff; cursor: pointer; box-shadow: 0 0 0 4px white inset, 0 0 15px rgba(0,0,0,0.3); transition: 0.1s; flex-shrink: 0; }
+        .shutter-btn:active { transform: scale(0.9); background: #e5e5ea; }
 
-        .company-footer { text-align: center; font-size: 8px; color: var(--text-muted); line-height: 1.4; margin-top: 15px; opacity: 0.6; }
+        .company-footer { text-align: center; font-size: 9px; color: var(--text-muted); line-height: 1.5; margin-top: 5px; opacity: 0.7; }
 
-        .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 100; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px); animation: modalBgFadeIn 0.3s ease; }
+        /* 模態視窗 */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0, 0, 0, 0.6); z-index: 100; display: none; justify-content: center; align-items: center; backdrop-filter: blur(10px); animation: modalBgFadeIn 0.2s ease; }
         @keyframes modalBgFadeIn { from { opacity: 0; } to { opacity: 1; } }
         
-        .settings-content, .help-content { background: var(--modal-bg); color: var(--text-main); width: 85%; max-width: 350px; max-height: 85vh; overflow-y: auto; border-radius: 16px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-        .help-content { white-space: pre-wrap; line-height: 1.6; font-size: 14px; }
-        @keyframes popIn { from { transform: scale(0.85) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+        .settings-content, .help-content { background: var(--modal-bg); color: var(--text-main); width: 85%; max-width: 320px; max-height: 85vh; overflow-y: auto; border-radius: 14px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .help-content { white-space: pre-wrap; line-height: 1.6; font-size: 14px; color: var(--text-muted); }
+        @keyframes popIn { from { transform: scale(0.9) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
         
         .input-group { background: var(--input-bg); border-radius: 10px; padding: 10px 15px; margin-bottom: 12px; }
-        .input-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; font-weight: bold; }
-        .input-group select, .input-group input[type="text"], .input-group input[type="number"] { width: 100%; border: none; font-size: 16px; font-weight:bold; color: var(--text-main); outline: none; background: transparent; }
-        .toggle-group { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; font-size: 12px; }
+        .input-group label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 3px; font-weight: 700; text-transform: uppercase; }
+        .input-group select, .input-group input { width: 100%; border: none; font-size: 16px; font-weight: 600; color: var(--text-main); outline: none; background: transparent; }
         
-        .modal-btn-done { background: #007AFF; color: white; border: none; width: 100%; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 10px; cursor: pointer; margin-top: 10px; }
-        .modal-btn-info { background: var(--input-bg); color: var(--text-main); border: 1px solid var(--input-border); width: 100%; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 10px; cursor: pointer; margin-top: 10px; }
-        .modal-btn-danger { background: #FF3B30; color: white; border: none; width: 100%; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 10px; cursor: pointer; margin-top: 10px; }
+        .modal-btn { width: 100%; height: 44px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 10px; transition: 0.2s; }
+        .modal-btn-done { background: var(--ios-blue); color: white; }
+        .modal-btn-info { background: var(--input-bg); color: var(--text-main); }
+        .modal-btn-danger { background: rgba(255, 59, 48, 0.1); color: #FF3B30; }
+        .modal-btn:active { opacity: 0.7; }
 
+        /* 平面圖視窗 */
         .map-content { background: var(--bg-main); width: 100%; height: 100%; display: flex; flex-direction: column; animation: slideUpMap 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes slideUpMap { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        .map-header { padding: 15px; display: flex; justify-content: space-between; align-items: center; background: var(--bg-panel); border-bottom: 1px solid var(--input-border); z-index: 10; }
-        .map-header h3 { margin: 0; font-size: 18px; color: var(--text-main); }
-        #mapFloorSelector { background: var(--input-bg); color: var(--text-main); border: 1px solid var(--input-border); border-radius: 8px; padding: 5px 10px; outline: none; font-weight: bold; font-size: 14px; }
-        .map-canvas-container { flex: 1; position: relative; background: var(--bg-main); overflow: hidden; touch-action: none; } 
+        .map-header { padding: 15px; display: flex; justify-content: space-between; align-items: center; background: var(--modal-bg); border-bottom: 1px solid var(--input-border); backdrop-filter: blur(20px); z-index: 10; }
+        .map-header h3 { margin: 0; font-size: 17px; font-weight: 600; color: var(--text-main); }
+        #mapFloorSelector { background: var(--input-bg); color: var(--ios-blue); border: none; border-radius: 8px; padding: 4px 8px; font-weight: 600; font-size: 14px; outline: none; }
+        .map-canvas-container { flex: 1; position: relative; overflow: hidden; touch-action: none; cursor: crosshair; } 
         #mapCanvas { width: 100%; height: 100%; display: block; touch-action: none; }
+
+        /* 照片詳情檢視器 Modal */
+        #photoViewerModal .modal-content { background: var(--bg-panel); width: 90%; max-width: 400px; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 15px 50px rgba(0,0,0,0.5); animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); padding: 0; }
+        .viewer-image-container { width: 100%; aspect-ratio: 4/3; background: #000; position: relative; border-bottom: 1px solid var(--input-border); }
+        #viewerImage { width: 100%; height: 100%; object-fit: contain; }
+        .viewer-info-container { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .info-row { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(142, 142, 147, 0.1); padding-bottom: 8px; }
+        .info-label { font-size: 13px; color: var(--text-muted); font-weight: 500; width: 80px; flex-shrink: 0; }
+        .info-value { font-size: 14px; color: var(--text-main); font-weight: 600; text-align: right; word-wrap: break-word; }
+        .info-row-remark { flex-direction: column; gap: 4px; border-bottom: none; }
+        #viewerRemark { text-align: left; color: var(--text-main); background: var(--input-bg); padding: 12px; border-radius: 8px; width: 100%; box-sizing: border-box; min-height: 40px; font-weight: 600; }
+        .viewer-footer { padding: 0 20px 20px; display: flex; justify-content: center; }
+        .btn-viewer-close { background: var(--ios-blue); color: #fff; font-weight: 700; font-size: 16px; height: 44px; width: 100%; border-radius: 12px; border: none; cursor: pointer; }
+        .btn-viewer-close:active { opacity: 0.8; }
 
         #canvas { display: none; }
     </style>
 </head>
-<body>
-
-    <div id="ptrIndicator"><span id="ptrIcon">↓</span>&nbsp;<span id="ptrText">下拉以重新載入...</span></div>
+<body class="dark-theme">
 
     <div id="appContainer">
         <div id="cameraSection">
             <div class="top-bar">
-                <button class="fab-settings" id="uiBtnSettings" onclick="openSettings()">設定</button>
+                <button class="fab-settings" onclick="openSettings()">設定</button>
                 <div class="export-group">
                     <button class="export-btn" id="uiBtnExport" onclick="exportPDF()" disabled>PDF (0)</button>
                     <button class="export-btn excel" id="uiBtnExportExcel" onclick="exportTrueExcel()" disabled>EXCEL</button>
                 </div>
             </div>
-            <div class="video-container">
-                <video id="videoElement" autoplay playsinline muted></video>
-                <div id="displayOverlay"></div>
-            </div>
+            <video id="videoElement" autoplay playsinline muted></video>
+            <div id="displayOverlay"></div>
         </div>
 
         <div id="controlPanel">
@@ -158,7 +178,7 @@
             </div>
             <input type="text" id="remarkInput" class="remark-input" placeholder="備註 (選填)">
             
-            <div class="segmented-control" id="directionControl">
+            <div class="segmented-control">
                 <button class="seg-btn active" id="dirNone" onclick="setDirection('none')">無</button>
                 <button class="seg-btn" id="dirE" onclick="setDirection('E')">東</button>
                 <button class="seg-btn" id="dirW" onclick="setDirection('W')">西</button>
@@ -170,97 +190,89 @@
             <div class="zoom-row"><span>1x</span><input type="range" id="zoomSlider" min="1" max="3" step="0.1" value="1"><span>3x</span></div>
             
             <div class="shutter-row">
-                <button class="side-btn left" id="uiBtnMap" onclick="openMap()">平面圖</button>
+                <button class="side-btn" onclick="openMap()">平面圖</button>
                 <button class="shutter-btn" onclick="takePicture()"></button>
-                <button class="side-btn right" id="uiBtnUndo" onclick="deleteLastPhoto()" disabled>刪除</button>
+                <button class="side-btn" id="uiBtnUndo" onclick="deleteLastPhoto()" disabled>刪除</button>
             </div>
             
             <div class="company-footer">
                 潤泰集團 RUENTEX 潤弘精密工程事業股份有限公司<br>
-                RTDC Designed by LINCY V1.0 | E-mail: RT023078@mail.ruentex.com.tw
+                RTDC Designed by LINCY | RT023078@mail.ruentex.com.tw
             </div>
         </div>
     </div>
 
     <div id="settingsModal" class="modal-overlay">
         <div class="settings-content">
-            <div class="modal-title" id="uiModalTitle" style="text-align:center; font-weight:bold; margin-bottom:15px;">系統與平面圖設定</div>
+            <div style="text-align:center; font-weight:700; margin-bottom:15px; font-size:17px;">系統設定</div>
             
             <div class="input-group">
-                <label id="lblUser">拍攝者</label>
+                <label>拍攝者</label>
                 <input type="text" id="userName" placeholder="請輸入姓名..." oninput="updateWatermarkPreview()">
                 <div class="toggle-group" style="margin-top:10px; border-top:1px solid var(--input-border); padding-top:10px;">
-                    <span id="lblShowUser">顯示於浮水印</span>
-                    <input type="checkbox" id="showUserInWM" checked onchange="updateWatermarkPreview()">
+                    <span style="font-size:13px; font-weight:600;">顯示於浮水印</span>
+                    <input type="checkbox" id="showUserInWM" checked onchange="updateWatermarkPreview()" style="width:auto;">
                 </div>
             </div>
 
             <div class="input-group">
-                <label id="lblMapSpan">網格垮距 (m)</label>
+                <label>平面圖網格垮距 (m)</label>
                 <input type="number" id="mapSpan" value="11" min="1" onchange="if(mapIsOpen) renderMap()">
             </div>
             <div class="input-group">
-                <label id="lblMapCol">柱子大小 (m)</label>
+                <label>平面圖柱子大小 (m)</label>
                 <input type="number" id="mapColSize" value="1" min="0.1" step="0.1" onchange="if(mapIsOpen) renderMap()">
             </div>
 
-            <div class="input-group">
-                <label id="lblLang">介面語言</label>
-                <select id="sysLang" onchange="applyLanguage()">
-                    <option value="zh" id="optLangZh">繁體中文</option>
-                    <option value="en" id="optLangEn">English</option>
+            <div class="input-group" style="display:flex; justify-content:space-between; align-items:center;">
+                <label style="margin:0;">風格主題</label>
+                <select id="sysTheme" onchange="applyTheme()" style="width:auto; color:var(--ios-blue);">
+                    <option value="dark">深色模式</option>
+                    <option value="light">淺色模式</option>
                 </select>
             </div>
+
             <div class="input-group">
-                <label id="lblTheme">風格主題</label>
-                <select id="sysTheme" onchange="applyTheme()">
-                    <option value="dark" id="optThemeDark">深色模式</option>
-                    <option value="light" id="optThemeLight">淺色模式</option>
-                </select>
-            </div>
-            
-            <div class="input-group">
-                <label id="lblColor">浮水印顏色</label>
+                <label>浮水印顏色</label>
                 <select id="wmColor" onchange="updateWatermarkPreview()">
-                    <option value="#FFD60A" id="optColorYellow">黃色</option>
-                    <option value="#FFFFFF" id="optColorWhite">白色</option>
-                    <option value="#FF453A" id="optColorRed">紅色</option>
-                    <option value="#32D74B" id="optColorGreen">綠色</option>
+                    <option value="#FFD60A">黃色</option>
+                    <option value="#FFFFFF">白色</option>
+                    <option value="#FF3B30">紅色</option>
+                    <option value="#32D74B">綠色</option>
                 </select>
             </div>
             <div class="input-group">
-                <label id="lblSize">浮水印大小</label>
-                <input type="range" id="wmSize" style="width:100%;" min="0.6" max="1.5" step="0.1" value="1.0" oninput="updateWatermarkPreview()">
+                <label>浮水印大小</label>
+                <input type="range" id="wmSize" min="0.6" max="1.5" step="0.1" value="1.0" oninput="updateWatermarkPreview()" style="height:20px;">
             </div>
-            <div class="input-group">
-                <label id="lblPos">浮水印位置</label>
-                <select id="wmPosition" onchange="updateWatermarkPreview()">
-                    <option value="bottom" id="optPosBot">相片底部</option>
-                    <option value="top" id="optPosTop">相片頂部</option>
+            <div class="input-group" style="display:flex; justify-content:space-between; align-items:center;">
+                <label style="margin:0;">浮水印位置</label>
+                <select id="wmPosition" onchange="updateWatermarkPreview()" style="width:auto; color:var(--ios-blue);">
+                    <option value="bottom">相片底部</option>
+                    <option value="top">相片頂部</option>
                 </select>
             </div>
-            
-            <hr style="border: 0; height: 1px; background: var(--input-border); margin: 15px 0;">
-            <button class="modal-btn-info" id="uiBtnHelp" onclick="openHelp()">使用說明</button>
-            <button class="modal-btn-danger" id="uiBtnClear" onclick="manualClearAll()">清空所有紀錄</button>
-            <button class="modal-btn-done" id="uiBtnDone" onclick="closeSettings()">完成</button>
+
+            <button class="modal-btn modal-btn-info" onclick="openHelp()">使用說明</button>
+            <button class="modal-btn modal-btn-danger" onclick="manualClearAll()">清空數據</button>
+            <button class="modal-btn modal-btn-done" onclick="closeSettings()" style="margin-top:20px;">完成</button>
         </div>
     </div>
 
     <div id="helpModal" class="modal-overlay">
         <div class="help-content">
-            <div class="modal-title" id="uiHelpTitle" style="text-align:center; font-weight:bold; margin-bottom:15px; font-size:18px;">使用說明</div>
-            <div id="uiHelpContent" style="margin-bottom: 20px; color: var(--text-muted);"></div>
-            <button class="modal-btn-done" id="uiBtnCloseHelp" onclick="closeHelp()">我知道了</button>
+            <div style="text-align:center; font-weight:700; margin-bottom:15px;">使用說明</div>
+            <div id="uiHelpContent">1. 輸入樓層與軸線(英文/數字)<br>2. 選擇拍攝方位與填寫備註<br>3. 按下快門拍照，照片將壓印浮水印並儲存<br>4. 點擊「平面圖」檢視坐標分佈<br>5. 點擊平面圖上的照片編號可放大檢視詳情<br>6. 點擊頂部匯出 PDF 或 EXCEL 報表</div>
+            <button class="modal-btn modal-btn-done" onclick="closeHelp()">我知道了</button>
         </div>
     </div>
 
     <div id="mapModal" class="modal-overlay">
         <div class="map-content">
             <div class="map-header">
-                <button class="fab-settings" id="uiBtnCloseMap" onclick="closeMap()">關閉</button>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <h3 id="uiMapTitle" style="margin:0;">缺失平面圖</h3>
+                <button class="fab-settings" onclick="closeMap()" style="color:var(--ios-blue); background:transparent; padding-left:0; box-shadow:none;">完成</button>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <h3 style="font-size:16px;">坐標分佈</h3>
                     <select id="mapFloorSelector" onchange="renderMap()"></select>
                 </div>
             </div>
@@ -270,86 +282,72 @@
         </div>
     </div>
 
+    <div id="photoViewerModal" class="modal-overlay" onclick="closePhotoViewer(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="viewer-image-container">
+                <img id="viewerImage" src="" alt="現場照片">
+            </div>
+            <div class="viewer-info-container">
+                <div class="info-row">
+                    <span class="info-label">坐標位置</span>
+                    <span class="info-value" id="viewerAxis"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">樓層</span>
+                    <span class="info-value" id="viewerFloor"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">時間</span>
+                    <span class="info-value" id="viewerTime" style="font-size: 12px;"></span>
+                </div>
+                <div class="info-row info-row-remark">
+                    <span class="info-label">備註</span>
+                    <div id="viewerRemark"></div>
+                </div>
+            </div>
+            <div class="viewer-footer">
+                <button class="btn-viewer-close" onclick="closePhotoViewer()">關閉</button>
+            </div>
+        </div>
+    </div>
+
     <canvas id="canvas"></canvas>
 
 <script>
-    const i18n = {
-        zh: {
-            uiBtnSettings: "設定", uiBtnExport: "PDF", uiBtnExportExcel: "EXCEL", uiBtnMap: "平面圖", uiBtnUndo: "刪除",
-            phFloor: "樓層", phNum: "數字", phEng: "英文", phRemark: "備註 (選填)", phUser: "請輸入姓名...",
-            dirNone: "無", dirE: "東", dirW: "西", dirS: "南", dirN: "北", dirC: "中",
-            ptrPull: "下拉以重新載入...", ptrRelease: "釋放以重新載入", ptrLoading: "載入中...",
-            uiModalTitle: "系統與平面圖設定", lblUser: "拍攝者", lblShowUser: "顯示於浮水印", 
-            lblMapSpan: "網格垮距 (m)", lblMapCol: "柱子大小 (m)",
-            lblLang: "介面語言", optLangZh: "繁體中文", optLangEn: "English",
-            lblTheme: "風格主題", optThemeDark: "深色模式", optThemeLight: "淺色模式", 
-            lblColor: "浮水印顏色", optColorYellow: "黃色", optColorWhite: "白色", optColorRed: "紅色", optColorGreen: "綠色",
-            lblSize: "浮水印大小", lblPos: "浮水印位置", optPosBot: "相片底部", optPosTop: "相片頂部", 
-            uiBtnHelp: "使用說明", uiBtnClear: "清空所有紀錄", uiBtnDone: "完成",
-            noPos: "未輸入位置", confirmNoPos: "您尚未輸入完整位置，確定要直接拍照嗎？", reportTitle: "現場巡察報告", alertExport: "報表已成功產出！請問是否要清空目前的紀錄？",
-            colNo: "項次", colImg: "現場照片", colFloor: "樓層", colAxis: "軸線", colDir: "方位", colUser: "拍攝者", colRemark: "備註", colTime: "時間",
-            uiMapTitle: "缺失平面圖", uiBtnCloseMap: "關閉", confirmDelete: "確定要刪除「上一張」照片紀錄嗎？\n資料將從資料庫中永久移除。",
-            confirmManualClear: "警告：這將會永久刪除所有已拍攝的紀錄與照片！\n確定要清空嗎？",
-            mapAllFloors: "全部樓層", noMapData: "無有效座標可繪製",
-            uiHelpTitle: "使用說明", uiBtnCloseHelp: "我知道了",
-            uiHelpContent: "1. 輸入樓層與軸線(英文/數字)\n2. 選擇拍攝方位與填寫備註\n3. 按下快門，照片將自動壓印浮水印並儲存\n4. 點擊「平面圖」可檢視帶有照片與引線的座標分佈\n5. 在「設定」中可自定義平面圖的垮距與柱子大小\n6. 點擊「刪除」可快速撤銷上一張照片\n7. 點擊頂部可匯出 PDF 或 原生 EXCEL 報表 (包含平面圖)"
-        },
-        en: {
-            uiBtnSettings: "Settings", uiBtnExport: "PDF", uiBtnExportExcel: "EXCEL", uiBtnMap: "Plan", uiBtnUndo: "Delete",
-            phFloor: "Floor", phNum: "Num", phEng: "Eng", phRemark: "Remark (Optional)", phUser: "Enter name...",
-            dirNone: "None", dirE: "E", dirW: "W", dirS: "S", dirN: "N", dirC: "C",
-            ptrPull: "Pull down to refresh...", ptrRelease: "Release to refresh", ptrLoading: "Loading...",
-            uiModalTitle: "System & Plan Settings", lblUser: "Photographer", lblShowUser: "Show in WM", 
-            lblMapSpan: "Grid Span (m)", lblMapCol: "Column Size (m)",
-            lblLang: "Language", optLangZh: "繁體中文", optLangEn: "English",
-            lblTheme: "Theme", optThemeDark: "Dark Mode", optThemeLight: "Light Mode", 
-            lblColor: "WM Color", optColorYellow: "Yellow", optColorWhite: "White", optColorRed: "Red", optColorGreen: "Green",
-            lblSize: "WM Size", lblPos: "WM Position", optPosBot: "Bottom", optPosTop: "Top", 
-            uiBtnHelp: "User Manual", uiBtnClear: "Clear All Records", uiBtnDone: "Done",
-            noPos: "No Location", confirmNoPos: "Incomplete info, take photo anyway?", reportTitle: "Site Inspection Report", alertExport: "Report exported! Clear current records?",
-            colNo: "No.", colImg: "Photo", colFloor: "Floor", colAxis: "Axis", colDir: "Direction", colUser: "Photographer", colRemark: "Remark", colTime: "Time",
-            uiMapTitle: "Defect Plan", uiBtnCloseMap: "Close", confirmDelete: "Delete the LAST photo?\nThis action cannot be undone.",
-            confirmManualClear: "Warning: This will permanently delete ALL records and photos!\nAre you sure?",
-            mapAllFloors: "All Floors", noMapData: "No valid coordinates",
-            uiHelpTitle: "User Manual", uiBtnCloseHelp: "Got it",
-            uiHelpContent: "1. Enter Floor and Axis (Eng/Num)\n2. Select Direction & add Remark\n3. Tap shutter to save photo with watermark\n4. Use 'Plan' to view photo distribution with leader lines\n5. Customize grid span and column size in Settings\n6. Tap 'Delete' to undo the last photo\n7. Export PDF or EXCEL reports (Plan included) from top bar"
-        }
-    };
-
-    const displayOverlay = document.getElementById('displayOverlay'), video = document.getElementById('videoElement'), canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
-    const posFloor = document.getElementById('posFloor'), posNum = document.getElementById('posNum'), posEng = document.getElementById('posEng'), remarkInput = document.getElementById('remarkInput');
-    const sysLang = document.getElementById('sysLang'), sysTheme = document.getElementById('sysTheme');
-    const wmColor = document.getElementById('wmColor'), wmSize = document.getElementById('wmSize'), wmPosition = document.getElementById('wmPosition');
-    const exportBtn = document.getElementById('uiBtnExport'), exportBtnExcel = document.getElementById('uiBtnExportExcel');
-    const userName = document.getElementById('userName'), showUserInWM = document.getElementById('showUserInWM');
-    const appContainer = document.getElementById('appContainer'), ptrIndicator = document.getElementById('ptrIndicator'), ptrIcon = document.getElementById('ptrIcon'), ptrText = document.getElementById('ptrText');
+    const displayOverlay = document.getElementById('displayOverlay');
+    const video = document.getElementById('videoElement');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const posFloor = document.getElementById('posFloor');
+    const posNum = document.getElementById('posNum');
+    const posEng = document.getElementById('posEng');
+    const remarkInput = document.getElementById('remarkInput');
+    const sysTheme = document.getElementById('sysTheme');
+    const wmColor = document.getElementById('wmColor');
+    const wmSize = document.getElementById('wmSize');
+    const wmPosition = document.getElementById('wmPosition');
+    const userName = document.getElementById('userName');
+    const showUserInWM = document.getElementById('showUserInWM');
+    const exportBtn = document.getElementById('uiBtnExport');
+    const exportBtnExcel = document.getElementById('uiBtnExportExcel');
     const btnUndo = document.getElementById('uiBtnUndo');
 
-    let db, inspectionRecords = [], currentZoom = 1, currentDirKey = "none", touchStartY = 0, currentDeltaY = 0, isPulling = false;
-    
+    let db, inspectionRecords = [], currentZoom = 1, currentDirKey = "none";
     let mapIsOpen = false, mapZoom = 1, mapPanX = 0, mapPanY = 0;
     let isMapDragging = false, mapStartX = 0, mapStartY = 0, initialPinchDist = null, initialZoom = 1;
+    let lastRenderedPointBoxes = [];
 
-    function loadImageAsync(src) {
-        return new Promise(resolve => {
-            const img = new Image();
-            img.onload = () => resolve(img);
-            img.onerror = () => resolve(null);
-            img.src = src;
-        });
-    }
-
+    // 純淨無字的模擬相機
     function startSimulatedCamera() {
         const simCanvas = document.createElement('canvas');
-        simCanvas.width = 1920; simCanvas.height = 1080;
+        simCanvas.width = 1080; simCanvas.height = 1920; 
         const simCtx = simCanvas.getContext('2d');
         let angle = 0;
         function drawSim() {
-            simCtx.fillStyle = '#2c2c2e'; simCtx.fillRect(0, 0, simCanvas.width, simCanvas.height);
+            simCtx.fillStyle = '#1c1c1e'; simCtx.fillRect(0, 0, simCanvas.width, simCanvas.height);
             simCtx.save(); simCtx.translate(simCanvas.width / 2, simCanvas.height / 2); simCtx.rotate(angle);
-            simCtx.fillStyle = '#3a3a3c'; simCtx.fillRect(-300, -300, 600, 600);
-            simCtx.fillStyle = '#007AFF'; simCtx.fillRect(-50, -50, 100, 100);
-            simCtx.restore(); angle += 0.01;
+            simCtx.fillStyle = '#007AFF'; simCtx.fillRect(-150, -150, 300, 300);
+            simCtx.restore(); angle += 0.02;
             requestAnimationFrame(drawSim);
         }
         drawSim();
@@ -357,18 +355,22 @@
     }
 
     window.onload = async () => {
-        applyLanguage(); initIndexedDB();
+        applyTheme(); initIndexedDB();
         try { 
             stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } }); 
             video.srcObject = stream;
         } catch (err) { startSimulatedCamera(); }
-        window.addEventListener('resize', () => { if(mapIsOpen) renderMap(); });
         
+        window.addEventListener('resize', () => { if(mapIsOpen) renderMap(); });
         const mCanvas = document.getElementById('mapCanvas');
-        mCanvas.addEventListener('touchstart', handleMapTouchStart, {passive: false});
-        mCanvas.addEventListener('touchmove', handleMapTouchMove, {passive: false});
-        mCanvas.addEventListener('touchend', handleMapTouchEnd);
-        mCanvas.addEventListener('wheel', handleMapWheel, {passive: false});
+        if(mCanvas) {
+            mCanvas.addEventListener('touchstart', handleMapTouchStart, {passive: false});
+            mCanvas.addEventListener('touchmove', handleMapTouchMove, {passive: false});
+            mCanvas.addEventListener('touchend', handleMapTouchEnd);
+            mCanvas.addEventListener('wheel', handleMapWheel, {passive: false});
+            mCanvas.addEventListener('click', handleMapClick); 
+        }
+        updateWatermarkPreview();
     };
 
     function initIndexedDB() {
@@ -376,217 +378,128 @@
         req.onupgradeneeded = e => e.target.result.createObjectStore("records", { keyPath: "id", autoIncrement: true });
         req.onsuccess = e => { db = e.target.result; loadRecordsFromDB(); };
     }
-
-    function saveRecordToDB(record) {
+    function saveRecordToDB(record) { const tx = db.transaction(["records"], "readwrite"); tx.objectStore("records").add(record); tx.oncomplete = () => loadRecordsFromDB(); }
+    function loadRecordsFromDB() {
+        const tx = db.transaction(["records"], "readonly");
+        tx.objectStore("records").getAll().onsuccess = e => { inspectionRecords = e.target.result; updateRecordUI(); if(mapIsOpen) renderMap(); };
+    }
+    function clearDB() { const tx = db.transaction(["records"], "readwrite"); tx.objectStore("records").clear(); tx.oncomplete = () => { inspectionRecords = []; updateRecordUI(); }; }
+    function manualClearAll() { if(inspectionRecords.length === 0) return; if(confirm("警告：這將會永久刪除所有已拍攝的紀錄與照片！\n確定要清空嗎？")) { clearDB(); closeSettings(); } }
+    function deleteLastPhoto() {
+        if (inspectionRecords.length === 0 || !confirm("確定要刪除「上一張」照片紀錄嗎？\n資料將從資料庫中永久移除。")) return;
         const tx = db.transaction(["records"], "readwrite");
-        tx.objectStore("records").add(record);
+        tx.objectStore("records").openCursor(null, 'prev').onsuccess = e => { if (e.target.result) e.target.result.delete(); };
         tx.oncomplete = () => loadRecordsFromDB();
     }
 
-    function loadRecordsFromDB() {
-        const tx = db.transaction(["records"], "readonly");
-        tx.objectStore("records").getAll().onsuccess = e => {
-            inspectionRecords = e.target.result;
-            updateRecordUI();
-            if(mapIsOpen) renderMap(); 
-        };
-    }
-
-    function clearDB() {
-        const tx = db.transaction(["records"], "readwrite");
-        tx.objectStore("records").clear();
-        tx.oncomplete = () => { inspectionRecords = []; updateRecordUI(); };
-    }
-
-    function manualClearAll() {
-        if(inspectionRecords.length === 0) return;
-        if(confirm(i18n[sysLang.value].confirmManualClear)) { clearDB(); closeSettings(); }
-    }
-
-    function deleteLastPhoto() {
-        if (inspectionRecords.length === 0) return;
-        if(!confirm(i18n[sysLang.value].confirmDelete)) return;
-
-        const tx = db.transaction(["records"], "readwrite");
-        const store = tx.objectStore("records");
-        const req = store.openCursor(null, 'prev');
-        req.onsuccess = function(e) {
-            const cursor = e.target.result;
-            if (cursor) cursor.delete();
-        };
-        tx.oncomplete = () => {
-            loadRecordsFromDB(); 
-            const vc = document.querySelector('.video-container'); 
-            vc.style.background = '#FF3B30'; video.style.opacity = '0.5';
-            setTimeout(() => { vc.style.background = '#111'; video.style.opacity = '1'; }, 150);
-        };
-    }
-
-    function applyLanguage() {
-        const lang = sysLang.value, txt = i18n[lang];
-        posFloor.placeholder = txt.phFloor; posNum.placeholder = txt.phNum; posEng.placeholder = txt.phEng; remarkInput.placeholder = txt.phRemark; userName.placeholder = txt.phUser;
-        ['dirNone','dirE','dirW','dirS','dirN','dirC'].forEach(id => document.getElementById(id).innerText = txt[id]);
-        if(!isPulling) ptrText.innerText = txt.ptrPull;
-        
-        ['uiBtnSettings', 'uiBtnMap', 'uiBtnUndo', 'uiModalTitle', 'lblUser', 'lblShowUser', 'lblMapSpan', 'lblMapCol', 'lblLang', 'lblTheme', 'lblColor', 'lblSize', 'lblPos', 'uiBtnDone', 'uiMapTitle', 'uiBtnCloseMap', 'uiBtnHelp', 'uiBtnClear', 'uiHelpTitle', 'uiBtnCloseHelp'].forEach(id => {
-            let el = document.getElementById(id); if(el) el.innerText = txt[id];
-        });
-        
-        document.getElementById('uiHelpContent').innerText = txt.uiHelpContent;
-        ['optLangZh', 'optLangEn', 'optThemeDark', 'optThemeLight', 'optColorYellow', 'optColorWhite', 'optColorRed', 'optColorGreen', 'optPosBot', 'optPosTop'].forEach(id => document.getElementById(id).innerText = txt[id]);
-        
-        updateRecordUI();
-        updateWatermarkPreview();
-        if (mapIsOpen) openMap();
-    }
-
     function applyTheme() {
+        if(!sysTheme) return;
         const isLight = sysTheme.value === 'light';
         document.body.classList.toggle('light-theme', isLight);
-        document.getElementById('themeColorMeta').setAttribute('content', isLight ? '#e5e5ea' : '#000000');
-        if (mapIsOpen) renderMap(); 
+        const meta = document.getElementById('themeColorMeta');
+        if(meta) meta.setAttribute('content', isLight ? '#f2f2f7' : '#000000');
+        if(mapIsOpen) renderMap();
     }
-
-    function isAnyModalOpen() {
-        return document.getElementById('settingsModal').style.display === 'flex' || 
-               document.getElementById('mapModal').style.display === 'flex' ||
-               document.getElementById('helpModal').style.display === 'flex';
-    }
-
-    appContainer.addEventListener('touchstart', e => { if(isAnyModalOpen()) return; touchStartY = e.touches[0].clientY; appContainer.style.transition = 'none'; }, { passive: true });
-    appContainer.addEventListener('touchmove', e => {
-        if(isAnyModalOpen()) return;
-        currentDeltaY = e.touches[0].clientY - touchStartY;
-        if (currentDeltaY > 0 && currentDeltaY < 250) {
-            isPulling = true; const ty = currentDeltaY * 0.4; appContainer.style.transform = `translateY(${ty}px)`;
-            ptrText.innerText = ty > 55 ? i18n[sysLang.value].ptrRelease : i18n[sysLang.value].ptrPull;
-            ptrIndicator.style.color = ty > 55 ? '#007AFF' : 'var(--text-muted)';
-        }
-    }, { passive: true });
-    appContainer.addEventListener('touchend', () => {
-        if (!isPulling) return;
-        isPulling = false; appContainer.style.transition = 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)';
-        if (currentDeltaY * 0.4 > 55) { ptrText.innerText = i18n[sysLang.value].ptrLoading; appContainer.style.transform = 'translateY(65px)'; setTimeout(() => window.location.reload(), 400); }
-        else appContainer.style.transform = 'translateY(0)';
-    });
-
-    [posFloor, posNum, posEng, remarkInput].forEach(el => el.addEventListener('input', () => {
-        if(el.id === 'posEng') el.value = el.value.toUpperCase();
-        updateWatermarkPreview();
-    }));
-
     function setDirection(key) {
         currentDirKey = key;
         document.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.id === 'dir' + key.charAt(0).toUpperCase() + key.slice(1)));
         updateWatermarkPreview();
     }
-
     function openSettings() { document.getElementById('settingsModal').style.display = 'flex'; }
     function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
     function openHelp() { document.getElementById('helpModal').style.display = 'flex'; }
     function closeHelp() { document.getElementById('helpModal').style.display = 'none'; }
 
-    function getDistance(touches) {
-        const dx = touches[0].clientX - touches[1].clientX;
-        const dy = touches[0].clientY - touches[1].clientY;
-        return Math.sqrt(dx * dx + dy * dy);
+    function openPhotoViewer(recordId) {
+        const record = inspectionRecords.find(r => r.id === recordId);
+        if (!record) return;
+        document.getElementById('viewerImage').src = record.img;
+        document.getElementById('viewerAxis').innerText = `${record.axis} / ${record.dir || "無"}`;
+        document.getElementById('viewerFloor').innerText = record.floor || "無";
+        document.getElementById('viewerTime').innerText = record.time;
+        document.getElementById('viewerRemark').innerText = record.rm || "無備註";
+        document.getElementById('photoViewerModal').style.display = 'flex';
+    }
+    function closePhotoViewer(event) {
+        if (event && event.target !== document.getElementById('photoViewerModal')) return;
+        document.getElementById('photoViewerModal').style.display = 'none';
     }
 
-    function handleMapTouchStart(e) {
-        e.preventDefault();
-        if (e.touches.length === 1) {
-            isMapDragging = true;
-            mapStartX = e.touches[0].clientX - mapPanX;
-            mapStartY = e.touches[0].clientY - mapPanY;
-        } else if (e.touches.length === 2) {
-            isMapDragging = false;
-            initialPinchDist = getDistance(e.touches);
-            initialZoom = mapZoom;
-        }
-    }
-
-    function handleMapTouchMove(e) {
-        e.preventDefault();
-        if (e.touches.length === 1 && isMapDragging) {
-            mapPanX = e.touches[0].clientX - mapStartX;
-            mapPanY = e.touches[0].clientY - mapStartY;
-            renderMap();
-        } else if (e.touches.length === 2 && initialPinchDist) {
-            const newDist = getDistance(e.touches);
-            mapZoom = initialZoom * (newDist / initialPinchDist);
-            if (mapZoom < 0.5) mapZoom = 0.5;
-            if (mapZoom > 10) mapZoom = 10;
-            renderMap();
-        }
-    }
-
-    function handleMapTouchEnd(e) {
-        if (e.touches.length < 2) initialPinchDist = null;
-        if (e.touches.length === 0) isMapDragging = false;
-    }
-
-    function handleMapWheel(e) {
-        e.preventDefault();
-        const zoomAmount = e.deltaY * -0.001;
-        mapZoom += zoomAmount;
-        if (mapZoom < 0.5) mapZoom = 0.5;
-        if (mapZoom > 10) mapZoom = 10;
-        renderMap();
-    }
+    function loadImageAsync(src) { return new Promise(resolve => { const img = new Image(); img.onload = () => resolve(img); img.src = src; }); }
 
     function openMap() {
         mapZoom = 1; mapPanX = 0; mapPanY = 0;
         const floorSel = document.getElementById('mapFloorSelector');
+        if(!floorSel) return;
         const currentVal = floorSel.value;
-        const txt = i18n[sysLang.value];
+        floorSel.innerHTML = '<option value="all">全部樓層</option>';
         
-        floorSel.innerHTML = `<option value="all">${txt.mapAllFloors}</option>`;
         let floors = [...new Set(inspectionRecords.map(r => r.floor).filter(f => f && f !== '-'))].sort();
-        floors.forEach(f => {
-            let opt = document.createElement('option');
-            opt.value = f; opt.innerText = f;
-            floorSel.appendChild(opt);
-        });
-
+        floors.forEach(f => { floorSel.innerHTML += `<option value="${f}">${f}</option>`; });
+        
         if (floors.includes(currentVal)) { floorSel.value = currentVal; } 
         else if (floors.length > 0) { floorSel.value = floors[floors.length - 1]; }
-
+        
         document.getElementById('mapModal').style.display = 'flex';
-        mapIsOpen = true;
-        setTimeout(renderMap, 100);
+        mapIsOpen = true; setTimeout(renderMap, 100);
     }
-    
-    function closeMap() {
-        document.getElementById('mapModal').style.display = 'none';
-        mapIsOpen = false;
+    function closeMap() { document.getElementById('mapModal').style.display = 'none'; mapIsOpen = false; }
+
+    function handleMapClick(e) {
+        if (!mapIsOpen || lastRenderedPointBoxes.length === 0) return;
+        const cvs = document.getElementById('mapCanvas');
+        const rect = cvs.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        const physClickX = (e.clientX - rect.left) * dpr;
+        const physClickY = (e.clientY - rect.top) * dpr;
+
+        for (let pt of lastRenderedPointBoxes) {
+            const bx = pt.physBox.x; const by = pt.physBox.y; const bw = pt.physBox.w; const bh = pt.physBox.h;
+            if (physClickX >= bx && physClickX <= bx + bw && physClickY >= by && physClickY <= by + bh) { openPhotoViewer(pt.recordId); return; }
+        }
+    }
+
+    function getDistance(touches) { return Math.sqrt(Math.pow(touches[0].clientX - touches[1].clientX, 2) + Math.pow(touches[0].clientY - touches[1].clientY, 2)); }
+    function handleMapTouchStart(e) {
+        if (e.touches.length === 1) { isMapDragging = true; mapStartX = e.touches[0].clientX - mapPanX; mapStartY = e.touches[0].clientY - mapPanY; }
+        else if (e.touches.length === 2) { isMapDragging = false; initialPinchDist = getDistance(e.touches); initialZoom = mapZoom; }
+    }
+    function handleMapTouchMove(e) {
+        e.preventDefault(); 
+        if (e.touches.length === 1 && isMapDragging) { mapPanX = e.touches[0].clientX - mapStartX; mapPanY = e.touches[0].clientY - mapStartY; renderMap(); }
+        else if (e.touches.length === 2 && initialPinchDist) {
+            mapZoom = initialZoom * (getDistance(e.touches) / initialPinchDist);
+            if (mapZoom < 0.5) mapZoom = 0.5; if (mapZoom > 10) mapZoom = 10;
+            renderMap();
+        }
+    }
+    function handleMapTouchEnd(e) { if (e.touches.length < 2) initialPinchDist = null; if (e.touches.length === 0) isMapDragging = false; }
+    function handleMapWheel(e) {
+        e.preventDefault(); mapZoom += e.deltaY * -0.001;
+        if (mapZoom < 0.5) mapZoom = 0.5; if (mapZoom > 10) mapZoom = 10;
+        renderMap();
     }
 
     async function renderMap() {
         const cvs = document.getElementById('mapCanvas');
         if(!cvs) return;
-        const rect = cvs.parentElement.getBoundingClientRect();
         const dpr = window.devicePixelRatio || 1;
+        const rect = cvs.parentElement.getBoundingClientRect();
         cvs.width = rect.width * dpr; cvs.height = rect.height * dpr;
-        
-        const theme = document.body.classList.contains('light-theme') ? 'light' : 'dark';
-        const selectedFloor = document.getElementById('mapFloorSelector').value;
-        
-        await drawMapOnCanvas(cvs, selectedFloor, dpr, theme);
+        await drawMapOnCanvas(cvs, document.getElementById('mapFloorSelector').value, dpr, sysTheme ? sysTheme.value : 'dark');
     }
 
-    async function drawMapOnCanvas(cvs, selectedFloor, dpr, theme) {
+    async function drawMapOnCanvas(cvs, selectedFloor, dpr, themeStyle) {
         const ctx = cvs.getContext('2d');
-        ctx.clearRect(0, 0, cvs.width, cvs.height);
-
-        const isLight = theme.includes('light');
-        const isExport = theme.includes('export');
+        const isLight = themeStyle.includes('light');
+        const isExport = themeStyle.includes('export');
         
-        ctx.fillStyle = isLight ? '#ffffff' : '#111111';
+        ctx.fillStyle = isLight ? '#f2f2f7' : '#111111';
         ctx.fillRect(0, 0, cvs.width, cvs.height);
 
         const gridLineColor = isLight ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)';
         const columnColor = isLight ? 'rgba(0, 0, 0, 0.4)' : 'rgba(255, 255, 255, 0.6)';
-        const axisTextColor = isLight ? '#007AFF' : '#FFD60A';
+        const axisTextColor = '#007AFF';
 
         const customSpan = parseFloat(document.getElementById('mapSpan').value) || 11;
         const customColSize = parseFloat(document.getElementById('mapColSize').value) || 1;
@@ -600,10 +513,9 @@
             if(parts.length === 2) {
                 let eng = parts[0].trim(); let num = parseFloat(parts[1].trim());
                 if(eng && eng !== '-' && !isNaN(num) && num > 0) {
-                    let y = 0;
-                    for(let c=0; c<eng.length; c++) { y = y * 26 + (eng.charCodeAt(c) - 64); }
+                    let y = 0; for(let c=0; c<eng.length; c++) { y = y * 26 + (eng.charCodeAt(c) - 64); }
                     if (y > 0) {
-                        points.push({ x: num, y: y, rm: r.rm, img: r.img, num: i + 1 });
+                        points.push({ x: num, y: y, num: i + 1, img: r.img, id: r.id });
                         if(num < minX) minX = num; if(num > maxX) maxX = num;
                         if(y < minY) minY = y; if(y > maxY) maxY = y;
                     }
@@ -612,24 +524,17 @@
         });
 
         if(points.length === 0) {
-            ctx.fillStyle = '#8e8e93'; ctx.font = `${20 * dpr}px "微軟正黑體", sans-serif`; ctx.textAlign = 'center';
-            ctx.fillText(i18n[sysLang.value].noMapData, cvs.width/2, cvs.height/2);
-            return;
+            ctx.fillStyle = '#8e8e93'; ctx.font = `600 ${18 * dpr}px sans-serif`; ctx.textAlign = 'center';
+            ctx.fillText(selectedFloor === 'all' ? "無坐標資料可繪製" : `${selectedFloor} 無坐標資料`, cvs.width/2, cvs.height/2);
+            lastRenderedPointBoxes = []; return;
         }
 
-        minX = Math.max(1, Math.floor(minX) - 1); maxX = Math.ceil(maxX) + 1;
-        minY = Math.max(1, Math.floor(minY) - 1); maxY = Math.ceil(maxY) + 1;
-        let gridW = maxX - minX; if(gridW === 0) gridW = 2;
-        let gridH = maxY - minY; if(gridH === 0) gridH = 2;
+        minX = Math.max(1, Math.floor(minX) - 1); maxX = Math.ceil(maxX) + 1; minY = Math.floor(minY) - 1; maxY = Math.ceil(maxY) + 1;
+        let gridW = maxX - minX; let gridH = maxY - minY;
 
-        // 🚀 動態修改邊距：手機預覽時邊距縮小，Excel高畫質匯出時給足邊距
-        const padX = isExport ? 250 * dpr : cvs.width * 0.1; 
-        const padY = isExport ? 250 * dpr : cvs.height * 0.15;
-        
-        let drawW = Math.max(cvs.width * 0.2, cvs.width - padX * 2);
-        let drawH = Math.max(cvs.height * 0.2, cvs.height - padY * 2);
-        
-        const baseScale = Math.min(drawW / gridW, drawH / gridH); 
+        const padX = isExport ? 200 * dpr : cvs.width * 0.1; 
+        const padY = isExport ? 200 * dpr : cvs.height * 0.15;
+        const baseScale = Math.min((cvs.width - padX * 2) / gridW, (cvs.height - padY * 2) / gridH); 
         
         let z = isExport ? 1 : mapZoom;
         let px = isExport ? 0 : mapPanX;
@@ -642,143 +547,95 @@
 
         const cx = cvs.width / 2 - (gridW * baseScale) / 2;
         const cy = cvs.height / 2 - (gridH * baseScale) / 2;
-
         function getScreenPt(x, y) { return { sx: cx + (x - minX) * baseScale, sy: cy + (y - minY) * baseScale }; }
 
         ctx.strokeStyle = gridLineColor; ctx.lineWidth = (2 * dpr) / z; ctx.beginPath();
-        for(let x = Math.floor(minX); x <= Math.ceil(maxX); x++) {
-            let p1 = getScreenPt(x, minY); let p2 = getScreenPt(x, maxY);
-            ctx.moveTo(p1.sx, p1.sy); ctx.lineTo(p2.sx, p2.sy);
-        }
-        for(let y = Math.floor(minY); y <= Math.ceil(maxY); y++) {
-            let p1 = getScreenPt(minX, y); let p2 = getScreenPt(maxX, y);
-            ctx.moveTo(p1.sx, p1.sy); ctx.lineTo(p2.sx, p2.sy);
-        }
+        for(let x = Math.floor(minX); x <= Math.ceil(maxX); x++) { let p1 = getScreenPt(x, minY); let p2 = getScreenPt(x, maxY); ctx.moveTo(p1.sx, p1.sy); ctx.lineTo(p2.sx, p2.sy); }
+        for(let y = Math.floor(minY); y <= Math.ceil(maxY); y++) { let p1 = getScreenPt(minX, y); let p2 = getScreenPt(maxX, y); ctx.moveTo(p1.sx, p1.sy); ctx.lineTo(p2.sx, p2.sy); }
         ctx.stroke();
 
         let colSizeRender = baseScale * (customColSize / customSpan); 
         ctx.fillStyle = columnColor;
         for(let x = Math.floor(minX); x <= Math.ceil(maxX); x++) {
             for(let y = Math.floor(minY); y <= Math.ceil(maxY); y++) {
-                let p = getScreenPt(x, y);
-                ctx.fillRect(p.sx - colSizeRender/2, p.sy - colSizeRender/2, colSizeRender, colSizeRender);
-                
-                ctx.font = `bold ${(14 * dpr)/z}px sans-serif`;
-                if(y === Math.floor(minY)) {
-                    ctx.fillStyle = axisTextColor; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-                    ctx.fillText(x.toString(), p.sx, p.sy - (15 * dpr)/z);
-                }
-                if(x === Math.floor(minX)) {
-                    ctx.fillStyle = axisTextColor; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-                    let letter = "", tempY = y;
-                    while(tempY > 0) {
-                        let rem = (tempY - 1) % 26; letter = String.fromCharCode(65 + rem) + letter; tempY = Math.floor((tempY - 1) / 26);
-                    }
-                    ctx.fillText(letter, p.sx - (15 * dpr)/z, p.sy);
-                }
+                let p = getScreenPt(x, y); ctx.fillRect(p.sx - colSizeRender/2, p.sy - colSizeRender/2, colSizeRender, colSizeRender);
+                ctx.font = `600 ${(13 * dpr)/z}px sans-serif`;
+                if(y === Math.floor(minY)) { ctx.fillStyle = axisTextColor; ctx.textAlign = 'center'; ctx.fillText(x.toString(), p.sx, p.sy - (12*dpr)/z); }
+                if(x === Math.floor(minX)) { ctx.fillStyle = axisTextColor; ctx.textAlign = 'right'; let letter = "", tempY = y; while(tempY > 0) { letter = String.fromCharCode(65 + (tempY-1)%26) + letter; tempY = Math.floor((tempY-1)/26); } ctx.fillText(letter, p.sx - (12*dpr)/z, p.sy + (5*dpr)/z); }
                 ctx.fillStyle = columnColor;
             }
         }
 
-        for (let pt of points) {
-            pt.imgObj = await loadImageAsync(pt.img);
-            pt.screen = getScreenPt(pt.x, pt.y);
-        }
-
-        const imgW = isExport ? 160 * dpr / z : 80 * dpr / z; 
-        const imgH = isExport ? 120 * dpr / z : 60 * dpr / z;
+        const imgW = (80 * dpr) / z; const imgH = (60 * dpr) / z;
         const boxes = [];
-        
-        const gridBox = {
-            x: cx - (30 * dpr / z),
-            y: cy - (30 * dpr / z),
-            w: (gridW * baseScale) + (60 * dpr / z),
-            h: (gridH * baseScale) + (60 * dpr / z)
-        };
+        const labelH = (16 * dpr) / z; const fontSize = (11 * dpr) / z;
+        const gridBox = { x: cx - (30*dpr)/z, y: cy - (30*dpr)/z, w: (gridW*baseScale)+(60*dpr)/z, h: (gridH*baseScale)+(60*dpr)/z };
 
-        function checkCollision(box) {
-            if (box.x < gridBox.x + gridBox.w &&
-                box.x + box.w > gridBox.x &&
-                box.y < gridBox.y + gridBox.h &&
-                box.y + box.h > gridBox.y) {
-                return true;
-            }
-            for(let b of boxes) {
-                if (box.x < b.x + b.w + (15*dpr/z) &&
-                    box.x + box.w + (15*dpr/z) > b.x &&
-                    box.y < b.y + b.h + (30*dpr/z) && 
-                    box.y + box.h + (15*dpr/z) > b.y) {
-                    return true;
-                }
-            }
-            return false;
-        }
+        lastRenderedPointBoxes = [];
+        for(let pt of points) pt.imgObj = await loadImageAsync(pt.img);
 
         for (let pt of points) {
-            let r = 0; 
-            let angle = 0;
-            let placed = false;
-            let bestBox = null;
-            let spiralStep = 10 * dpr / z; 
+            let pScreen = getScreenPt(pt.x, pt.y);
+            let r = 0, angle = 0, placed = false, bestBox = null;
+            let spiralStep = (12 * dpr) / z;
 
             while (!placed && r < 5000 * dpr) {
-                let tx = pt.screen.sx + r * Math.cos(angle);
-                let ty = pt.screen.sy + r * Math.sin(angle);
-                let box = {x: tx - imgW/2, y: ty - imgH/2, w: imgW, h: imgH};
+                let tx = pScreen.sx + r * Math.cos(angle); let ty = pScreen.sy + r * Math.sin(angle);
+                let box = { x: tx - imgW/2, y: ty - imgH/2, w: imgW, h: imgH };
                 
-                if (!checkCollision(box)) { 
-                    bestBox = box; 
-                    placed = true; 
-                }
-                angle += 0.5; 
-                r += spiralStep;
+                let collide = (box.x < gridBox.x + gridBox.w && box.x + box.w > gridBox.x && box.y < gridBox.y + gridBox.h && box.y + box.h > gridBox.y);
+                if (!collide) { for(let b of boxes) { if(box.x < b.x + b.w + (10*dpr)/z && box.x + box.w + (10*dpr)/z > b.x && box.y < b.y + b.h + (labelH+10*dpr)/z && box.y + box.h + (10*dpr)/z > b.y) { collide = true; break; } } }
+                if (!collide) { bestBox = box; placed = true; }
+                angle += 0.4; r += spiralStep;
             }
 
             if (bestBox) {
                 boxes.push(bestBox);
                 
+                ctx.beginPath(); ctx.moveTo(pScreen.sx, pScreen.sy); ctx.lineTo(bestBox.x + bestBox.w/2, bestBox.y + bestBox.h/2);
+                ctx.strokeStyle = isLight ? 'rgba(60,60,67,0.3)' : 'rgba(235,235,245,0.3)'; ctx.lineWidth = (1.5 * dpr) / z; ctx.stroke();
+                ctx.beginPath(); ctx.arc(pScreen.sx, pScreen.sy, (4 * dpr)/z, 0, Math.PI * 2); ctx.fillStyle = '#FF3B30'; ctx.fill();
+
+                const cornerR = (8 * dpr) / z; const totalH = bestBox.h + labelH; const topY = bestBox.y - labelH;
+
+                ctx.fillStyle = isLight ? '#ffffff' : '#1c1c1e';
                 ctx.beginPath();
-                ctx.moveTo(pt.screen.sx, pt.screen.sy);
-                ctx.lineTo(bestBox.x + bestBox.w/2, bestBox.y + bestBox.h/2);
-                ctx.strokeStyle = 'rgba(255, 59, 48, 0.8)';
-                ctx.lineWidth = 1.5 * dpr / z;
-                ctx.stroke();
+                ctx.moveTo(bestBox.x + cornerR, topY); ctx.lineTo(bestBox.x + bestBox.w - cornerR, topY); ctx.arcTo(bestBox.x + bestBox.w, topY, bestBox.x + bestBox.w, topY + cornerR, cornerR);
+                ctx.lineTo(bestBox.x + bestBox.w, topY + totalH - cornerR); ctx.arcTo(bestBox.x + bestBox.w, topY + totalH, bestBox.x + bestBox.w - cornerR, topY + totalH, cornerR);
+                ctx.lineTo(bestBox.x + cornerR, topY + totalH); ctx.arcTo(bestBox.x, topY + totalH, bestBox.x, topY + totalH - cornerR, cornerR);
+                ctx.lineTo(bestBox.x, topY + cornerR); ctx.arcTo(bestBox.x, topY, bestBox.x + cornerR, topY, cornerR); ctx.closePath(); ctx.fill();
+                
+                ctx.strokeStyle = isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'; ctx.lineWidth = (1 * dpr) / z; ctx.stroke();
 
-                ctx.beginPath(); ctx.arc(pt.screen.sx, pt.screen.sy, (5 * dpr)/z, 0, Math.PI * 2);
-                ctx.fillStyle = '#FF3B30'; ctx.fill();
-                ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = (1.5 * dpr)/z; ctx.stroke();
+                ctx.save(); ctx.beginPath(); const innerR = Math.max(0, cornerR - (1*dpr/z));
+                ctx.moveTo(bestBox.x + innerR, bestBox.y); ctx.lineTo(bestBox.x + bestBox.w - innerR, bestBox.y); ctx.arcTo(bestBox.x + bestBox.w, bestBox.y, bestBox.x + bestBox.w, bestBox.y + innerR, innerR);
+                ctx.lineTo(bestBox.x + bestBox.w, bestBox.y + bestBox.h - innerR); ctx.arcTo(bestBox.x + bestBox.w, bestBox.y + bestBox.h, bestBox.x + bestBox.w - innerR, bestBox.y + bestBox.h, innerR);
+                ctx.lineTo(bestBox.x + innerR, bestBox.y + bestBox.h); ctx.arcTo(bestBox.x, bestBox.y + bestBox.h, bestBox.x, bestBox.y + bestBox.h - innerR, innerR);
+                ctx.lineTo(bestBox.x, bestBox.y + innerR); ctx.arcTo(bestBox.x, bestBox.y, bestBox.x + innerR, bestBox.y, innerR); ctx.clip();
+                if (pt.imgObj) { ctx.drawImage(pt.imgObj, bestBox.x, bestBox.y, bestBox.w, bestBox.h); } ctx.restore();
 
-                ctx.fillStyle = '#FF3B30';
-                ctx.fillRect(bestBox.x - (2*dpr/z), bestBox.y - (2*dpr/z), bestBox.w + (4*dpr/z), bestBox.h + (4*dpr/z));
+                ctx.fillStyle = '#007AFF'; ctx.font = `600 ${fontSize}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(`No.${pt.num}`, bestBox.x + bestBox.w/2, topY + labelH/2);
 
-                if (pt.imgObj) {
-                    ctx.drawImage(pt.imgObj, bestBox.x, bestBox.y, bestBox.w, bestBox.h);
-                } else {
-                    ctx.fillStyle = '#333';
-                    ctx.fillRect(bestBox.x, bestBox.y, bestBox.w, bestBox.h);
-                }
-
-                const labelH = isExport ? 20 * dpr / z : 14 * dpr / z;
-                const fontSize = isExport ? 16 * dpr / z : 11 * dpr / z;
-                ctx.fillStyle = '#FF3B30';
-                ctx.fillRect(bestBox.x - (2*dpr/z), bestBox.y - labelH - (2*dpr/z), bestBox.w + (4*dpr/z), labelH + (2*dpr/z));
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = `bold ${fontSize}px sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'top';
-                ctx.fillText(`No.${pt.num}`, bestBox.x + bestBox.w/2, bestBox.y - labelH);
+                const matrix = ctx.getTransform();
+                lastRenderedPointBoxes.push({
+                    recordId: pt.id,
+                    physBox: { x: matrix.a * bestBox.x + matrix.c * topY + matrix.e, y: matrix.b * bestBox.x + matrix.d * topY + matrix.f, w: bestBox.w * matrix.a, h: totalH * matrix.d, labelH: labelH * matrix.d }
+                });
             }
         }
         ctx.restore();
     }
 
+    // --- 相機拍攝與匯出 ---
+    [posFloor, posNum, posEng, remarkInput].forEach(el => el.addEventListener('input', () => { if(el.id === 'posEng') el.value = el.value.toUpperCase(); updateWatermarkPreview(); }));
+
     function updateWatermarkPreview() {
-        const lang = sysLang.value, txt = i18n[lang], fl = posFloor.value.trim(), num = posNum.value.trim(), eng = posEng.value.trim(), rm = remarkInput.value.trim(), user = userName.value.trim();
+        const fl = posFloor.value.trim(), num = posNum.value.trim(), eng = posEng.value.trim(), rm = remarkInput.value.trim(), user = userName ? userName.value.trim() : "";
         let floorStr = fl ? `L${fl}` : "", axisStr = (eng || num) ? `${eng || "-"}/${num || "-"}` : "";
-        let dirText = currentDirKey === "none" ? "" : txt['dir' + currentDirKey.charAt(0).toUpperCase() + currentDirKey.slice(1)];
-        
+        let dirText = currentDirKey === "none" ? "" : currentDirKey;
         let infoArr = [floorStr, axisStr, dirText, rm].filter(Boolean);
-        let mainStr = infoArr.join('  ') || txt.noPos;
+        let mainStr = infoArr.join('  ') || "未輸入位置";
         
         const activeColor = wmColor ? wmColor.value : '#FFD60A';
         const activeSize = wmSize ? parseFloat(wmSize.value) : 1.0;
@@ -786,81 +643,70 @@
         
         const fs = 20 * activeSize;
 
-        let html = `<div style="color: ${activeColor}; font-size: ${fs}px;">${mainStr}`;
-        let timeStr = new Date().toLocaleString();
-        if (user && showUserInWM.checked) timeStr += `  (${user})`;
-        html += `<br><span style="color: white; font-size: 0.6em; font-weight: normal; opacity: 0.9;">${timeStr}</span></div>`;
+        let html = `<div style="color: ${activeColor}; font-size: ${fs}px; font-weight: bold; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);">${mainStr}`;
+        let timeStr = new Date().toLocaleString() + (user && showUserInWM && showUserInWM.checked ? `  (${user})` : "");
+        html += `<br><span style="color: white; font-size: 0.6em; font-weight: normal;">${timeStr}</span></div>`;
         
-        displayOverlay.innerHTML = html;
-        displayOverlay.style.top = activePos === "top" ? "0" : "auto";
-        displayOverlay.style.bottom = activePos === "top" ? "auto" : "0";
+        displayOverlay.innerHTML = html; 
+        
+        // 🚀 精準控制：根據設定將 Overlay 鎖在相機區的上方或下方
+        if (activePos === "top") {
+            displayOverlay.style.top = "0px";
+            displayOverlay.style.bottom = "auto";
+        } else {
+            displayOverlay.style.top = "auto";
+            displayOverlay.style.bottom = "0px";
+        }
     }
 
     document.getElementById('zoomSlider').addEventListener('input', e => { currentZoom = e.target.value; video.style.transform = `scale(${currentZoom})`; });
 
     function wrapText(context, text, x, y, maxWidth, lineHeight) {
-        var words = text.split('  '); 
-        if(words.length === 1) words = text.split(' ');
-        var line = ''; var currentY = y;
+        var words = text.split('  '); if(words.length === 1) words = text.split(' '); var line = ''; var currentY = y;
         for (var n = 0; n < words.length; n++) {
-            var testLine = line + words[n] + '  ';
-            var metrics = context.measureText(testLine);
-            if (metrics.width > maxWidth && n > 0) {
-                context.fillText(line, x, currentY); line = words[n] + '  '; currentY += lineHeight;
-            } else { line = testLine; }
+            var testLine = line + words[n] + '  '; var metrics = context.measureText(testLine);
+            if (metrics.width > maxWidth && n > 0) { context.fillText(line, x, currentY); line = words[n] + '  '; currentY += lineHeight; } else { line = testLine; }
         }
-        context.fillText(line, x, currentY);
-        return currentY + lineHeight;
+        context.fillText(line, x, currentY); return currentY + lineHeight;
     }
 
     function takePicture() {
         if (!video.videoWidth) return;
-        const fl = posFloor.value.trim(), num = posNum.value.trim(), eng = posEng.value.trim(), rm = remarkInput.value.trim(), user = userName.value.trim();
-        if (!fl && !num && !eng) if(!confirm(i18n[sysLang.value].confirmNoPos)) return;
+        const fl = posFloor.value.trim(), num = posNum.value.trim(), eng = posEng.value.trim(), rm = remarkInput.value.trim();
+        if (!fl && !num && !eng) if(!confirm("您尚未輸入完整位置，確定要直接拍照嗎？")) return;
 
         canvas.width = 1024; canvas.height = 768;
         const targetAspect = 1024 / 768, zw = video.videoWidth / currentZoom, zh = video.videoHeight / currentZoom;
         const zx = (video.videoWidth - zw) / 2, zy = (video.videoHeight - zh) / 2;
         let sW, sH, sX, sY;
-        if (zw / zh > targetAspect) { sH = zh; sW = sH * targetAspect; sX = zx + (zw - sW) / 2; sY = zy; }
-        else { sW = zw; sH = sW / targetAspect; sX = zx; sY = zy + (zh - sH) / 2; }
+        if (zw / zh > targetAspect) { sH = zh; sW = sH * targetAspect; sX = zx + (zw - sW) / 2; sY = zy; } else { sW = zw; sH = sW / targetAspect; sX = zx; sY = zy + (zh - sH) / 2; }
         ctx.drawImage(video, sX, sY, sW, sH, 0, 0, canvas.width, canvas.height);
 
-        const lang = sysLang.value, txt = i18n[lang];
         let floorStr = fl ? `L${fl}` : "", axisStr = (eng || num) ? `${eng || "-"}/${num || "-"}` : "";
-        let dirText = currentDirKey === "none" ? "" : txt['dir' + currentDirKey.charAt(0).toUpperCase() + currentDirKey.slice(1)];
-        let timeStr = new Date().toLocaleString();
-        if (user && showUserInWM.checked) timeStr += `  (${user})`;
+        let dirText = currentDirKey === "none" ? "" : currentDirKey;
+        let timeStr = new Date().toLocaleString(); const user = userName ? userName.value.trim() : ""; 
+        if (user && showUserInWM && showUserInWM.checked) timeStr += `  (${user})`;
 
         const activeSize = wmSize ? parseFloat(wmSize.value) : 1.0;
         const activeColor = wmColor ? wmColor.value : '#FFD60A';
         const activePos = wmPosition ? wmPosition.value : 'bottom';
 
         const ufs = Math.floor(canvas.width / 30) * activeSize;
-        const margin = canvas.width * 0.02;
-        const maxWidth = canvas.width - (margin * 2);
-        const lineH = ufs * 1.2;
-
-        ctx.font = `bold ${ufs}px "微軟正黑體", sans-serif`;
-        const infoFullText = [floorStr, axisStr, dirText, rm].filter(Boolean).join('  ');
+        const margin = canvas.width * 0.02; const maxWidth = canvas.width - (margin * 2); const lineH = ufs * 1.2;
         
+        ctx.font = `bold ${ufs}px "微軟正黑體", sans-serif`; ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+
+        const infoFullText = [floorStr, axisStr, dirText, rm].filter(Boolean).join('  ');
         let testLines = 1, words = infoFullText.split('  '), line = '';
-        for(let n=0; n<words.length; n++){
-            let testLine = line + words[n] + '  ';
-            if(ctx.measureText(testLine).width > maxWidth && n > 0){ testLines++; line = words[n] + '  '; } else { line = testLine; }
-        }
+        for(let n=0; n<words.length; n++){ let testLine = line + words[n] + '  '; if(ctx.measureText(testLine).width > maxWidth && n > 0){ testLines++; line = words[n] + '  '; } else { line = testLine; } }
         
         const totalBoxHeight = (testLines * lineH) + (ufs * 1.0);
         const boxY = activePos === "top" ? 0 : canvas.height - totalBoxHeight;
 
-        ctx.fillStyle = "rgba(0, 0, 0, 0.5)"; ctx.fillRect(0, boxY, canvas.width, totalBoxHeight);
+        ctx.fillRect(0, boxY, canvas.width, totalBoxHeight);
         
-        ctx.fillStyle = activeColor;
-        let nextY = wrapText(ctx, infoFullText, margin, boxY + ufs, maxWidth, lineH);
-        
-        ctx.font = `normal ${ufs * 0.6}px "微軟正黑體", sans-serif`;
-        ctx.fillStyle = "white";
-        ctx.fillText(timeStr, margin, nextY - (lineH * 0.3));
+        ctx.fillStyle = activeColor; let nextY = wrapText(ctx, infoFullText, margin, boxY + ufs, maxWidth, lineH);
+        ctx.font = `normal ${ufs * 0.6}px "微軟正黑體", sans-serif`; ctx.fillStyle = "white"; ctx.fillText(timeStr, margin, nextY - (lineH * 0.3));
 
         const sequence = inspectionRecords.length + 1;
         let locForFile = [floorStr, axisStr.replace(/\//g, '-')].filter(Boolean).join(' ');
@@ -868,160 +714,85 @@
 
         const imgData = canvas.toDataURL('image/jpeg', 0.85);
         const link = document.createElement('a'); link.download = fileName; link.href = imgData; link.click();
-        saveRecordToDB({ floor: floorStr, axis: axisStr, dir: dirText, rm: rm, user: user, time: timeStr, img: imgData });
+        saveRecordToDB({ floor: floorStr, axis: axisStr, dir: dirText, rm: rm, user: user, time: timeStr, img: imgData, id: Date.now() });
 
-        const vc = document.querySelector('.video-container'); vc.style.background = 'white'; video.style.opacity = '0.2';
-        setTimeout(() => { vc.style.background = '#111'; video.style.opacity = '1'; }, 150);
+        const cameraSec = document.getElementById('cameraSection');
+        const flash = document.createElement('div');
+        flash.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:#fff;z-index:99;opacity:1;transition:opacity 0.2s ease-out;';
+        cameraSec.appendChild(flash);
+        setTimeout(() => { flash.style.opacity = '0'; }, 50);
+        setTimeout(() => { cameraSec.removeChild(flash); }, 250);
     }
 
     function updateRecordUI() { 
-        const lang = sysLang.value, txt = i18n[lang];
-        exportBtn.innerText = `PDF (${inspectionRecords.length})`; 
-        exportBtn.disabled = inspectionRecords.length === 0; 
-        exportBtnExcel.innerText = `${txt.uiBtnExportExcel} (${inspectionRecords.length})`;
-        exportBtnExcel.disabled = inspectionRecords.length === 0;
+        exportBtn.innerText = `PDF (${inspectionRecords.length})`; exportBtn.disabled = inspectionRecords.length === 0; 
+        exportBtnExcel.innerText = `EXCEL (${inspectionRecords.length})`; exportBtnExcel.disabled = inspectionRecords.length === 0;
         btnUndo.disabled = inspectionRecords.length === 0;
     }
 
     async function exportTrueExcel() {
         if (inspectionRecords.length === 0) return;
-        const txt = i18n[sysLang.value];
-        
-        const originalBtnText = exportBtnExcel.innerText;
-        exportBtnExcel.innerText = txt.ptrLoading;
-        exportBtnExcel.disabled = true;
+        exportBtnExcel.innerText = "輸出中..."; exportBtnExcel.disabled = true;
 
         try {
             const workbook = new ExcelJS.Workbook();
-            workbook.creator = 'RTDC Lincy';
-            
             const sheet = workbook.addWorksheet('巡察報告 Report');
-            sheet.columns = [
-                { header: txt.colNo, key: 'no', width: 8 },
-                { header: txt.colImg, key: 'img', width: 35 }, 
-                { header: txt.colFloor, key: 'floor', width: 12 },
-                { header: txt.colAxis, key: 'axis', width: 15 },
-                { header: txt.colDir, key: 'dir', width: 10 },
-                { header: txt.colUser, key: 'user', width: 15 },
-                { header: txt.colRemark, key: 'rm', width: 30 },
-                { header: txt.colTime, key: 'time', width: 22 }
-            ];
-
-            sheet.getRow(1).font = { name: '微軟正黑體', bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
-            sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF007AFF' } };
-            sheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
-            sheet.getRow(1).height = 30;
+            sheet.columns = [{ header: '項次', key: 'no', width: 8 }, { header: '現場照片', key: 'img', width: 35 }, { header: '樓層', key: 'floor', width: 12 }, { header: '坐標', key: 'axis', width: 15 }, { header: '方位', key: 'dir', width: 10 }, { header: '拍攝者', key: 'user', width: 15 }, { header: '備註', key: 'rm', width: 30 }, { header: '時間', key: 'time', width: 22 }];
+            sheet.getRow(1).font = { bold: true, size: 12 }; sheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' }; sheet.getRow(1).height = 25;
 
             for (let i = 0; i < inspectionRecords.length; i++) {
-                const r = inspectionRecords[i];
-                const rowIndex = i + 2;
+                const r = inspectionRecords[i], rowIndex = i + 2;
                 sheet.addRow({ no: i + 1, floor: r.floor, axis: r.axis, dir: r.dir, user: r.user, rm: r.rm, time: r.time });
-                const row = sheet.getRow(rowIndex);
-                row.height = 120;
-                row.font = { name: '微軟正黑體', size: 12 };
-                row.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                const row = sheet.getRow(rowIndex); row.height = 120; row.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
                 const imageId = workbook.addImage({ base64: r.img, extension: 'jpeg' });
                 sheet.addImage(imageId, { tl: { col: 1, row: rowIndex - 1 }, ext: { width: 200, height: 150 }, editAs: 'oneCell' });
             }
 
             let floors = [...new Set(inspectionRecords.map(r => r.floor).filter(f => f && f !== '-'))].sort();
             if(floors.length === 0) floors.push('all');
-
             for (let f of floors) {
-                const offCvs = document.createElement('canvas');
-                offCvs.width = 2400; offCvs.height = 1800; 
-                
+                const offCvs = document.createElement('canvas'); offCvs.width = 2400; offCvs.height = 1800; 
                 await drawMapOnCanvas(offCvs, f, 2, 'light_export'); 
-                
-                const mapDataUrl = offCvs.toDataURL('image/jpeg', 0.85);
-                const safeName = f === 'all' ? txt.mapAllFloors : `L${f}`;
-                const mapSheet = workbook.addWorksheet(`平面圖 - ${safeName}`.substring(0, 31)); 
-                
-                const mapImageId = workbook.addImage({ base64: mapDataUrl, extension: 'jpeg' });
-                mapSheet.addImage(mapImageId, {
-                    tl: { col: 0, row: 0 },
-                    ext: { width: 1200, height: 900 }
-                });
+                const safeName = f === 'all' ? "全部" : f; 
+                const mapSheet = workbook.addWorksheet(`平面圖 - ${safeName}`.substring(0, 31));
+                mapSheet.addImage(workbook.addImage({ base64: offCvs.toDataURL('image/jpeg', 0.8), extension: 'jpeg' }), { tl: { col: 0, row: 0 }, ext: { width: 1200, height: 900 } });
             }
 
             const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = `Inspection_Report_${new Date().getTime()}.xlsx`; a.click(); URL.revokeObjectURL(url);
-            
-            if(confirm(txt.alertExport)) clearDB();
-        } catch(err) {
-            console.error(err);
-            alert("EXCEL 匯出失敗 / EXCEL Export Error");
-        } finally {
-            updateRecordUI();
-        }
+            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })); a.download = `RTDC_Report_${new Date().getTime()}.xlsx`; a.click();
+            if(confirm("報表已生成！請問是否要清空目前的紀錄？")) clearDB();
+        } catch(err) { console.error(err); alert("EXCEL 匯出失敗"); } finally { exportBtnExcel.innerText = `EXCEL (${inspectionRecords.length})`; exportBtnExcel.disabled = false; }
     }
 
     function exportPDF() {
         if (inspectionRecords.length === 0) return;
-        const txt = i18n[sysLang.value];
-
         const container = document.createElement('div');
-        container.style.padding = '20px';
-        container.style.fontFamily = '"微軟正黑體", sans-serif';
-        container.style.color = '#000';
-        container.style.background = '#fff';
-        container.style.position = 'absolute';
-        container.style.left = '-9999px'; 
-        container.style.width = '900px';  
-
-        let html = `<h2 style="color: #333; border-bottom: 2px solid #007AFF; padding-bottom: 10px; display: inline-block;">${txt.reportTitle}</h2>`;
-        html += `<p>${new Date().toLocaleString()}</p>`;
-        html += `<table style="width:100%; border-collapse:collapse; margin-top:20px;">`;
-        html += `<thead><tr>`;
-        ['colNo', 'colImg', 'colFloor', 'colAxis', 'colDir', 'colUser', 'colRemark', 'colTime'].forEach(k => {
-            html += `<th style="border:1px solid #ddd; padding:10px; background:#007AFF; color:white; font-size:14px;">${txt[k]}</th>`;
-        });
-        html += `</tr></thead><tbody>`;
-
+        container.style = 'padding:15px; background:#fff; color:#000; position:absolute; left:-9999px; width:800px; font-family:sans-serif;';
+        container.innerHTML = `<h2 style="text-align:center; color:#333; margin-bottom:5px;">現場巡察報告</h2><p style="text-align:center; font-size:12px; color:#666; margin:0 0 15px 0;">生成時間: ${new Date().toLocaleString()}</p>`;
+        
+        let html = '<table style="width:100%; border-collapse:collapse; font-size:12px; table-layout:fixed; border:1px solid #ddd;">';
+        html += '<thead style="background:#f5f5f7;"><tr><th style="border:1px solid #ddd; padding:8px; width:5%;">項次</th><th style="border:1px solid #ddd; padding:8px; width:35%;">現場照片</th><th style="border:1px solid #ddd; padding:8px; width:15%;">坐標/方位</th><th style="border:1px solid #ddd; padding:8px; width:30%;">缺失情況(備註)</th><th style="border:1px solid #ddd; padding:8px; width:15%;">拍攝資訊</th></tr></thead><tbody>';
+        
         inspectionRecords.forEach((r, i) => {
             html += `<tr>
-                <td style="border:1px solid #ddd; padding:10px; text-align:center;">${i+1}</td>
-                <td style="border:1px solid #ddd; padding:10px; text-align:center;"><img src="${r.img}" style="max-width:200px; border-radius:4px;"></td>
-                <td style="border:1px solid #ddd; padding:10px; text-align:center; font-weight:bold; color:#007AFF;">${r.floor}</td>
-                <td style="border:1px solid #ddd; padding:10px; text-align:center; font-weight:bold; color:#d9534f;">${r.axis}</td>
-                <td style="border:1px solid #ddd; padding:10px; text-align:center;">${r.dir}</td>
-                <td style="border:1px solid #ddd; padding:10px; text-align:center;">${r.user}</td>
-                <td style="border:1px solid #ddd; padding:10px; text-align:center; color:#e67e22; font-weight:bold;">${r.rm}</td>
-                <td style="border:1px solid #ddd; padding:10px; text-align:center; font-size:12px;">${r.time}</td>
+                <td style="border:1px solid #ddd; padding:8px; text-align:center;">${i+1}</td>
+                <td style="border:1px solid #ddd; padding:8px; text-align:center;"><img src="${r.img}" style="max-width:100%; height:auto; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.2);"></td>
+                <td style="border:1px solid #ddd; padding:8px; text-align:center; font-weight:bold;">${r.floor}<br><span style="color:#d9534f;">${r.axis}</span><br>${r.dir}</td>
+                <td style="border:1px solid #ddd; padding:8px; color:#e67e22; font-weight:bold;">${r.rm || "-"}</td>
+                <td style="border:1px solid #ddd; padding:8px; font-size:10px; color:#666;">${r.user || "未知"}<br>${r.time}</td>
             </tr>`;
         });
-
-        html += `</tbody></table>`;
-        html += `<div style="margin-top:40px; padding-top:15px; border-top:1px solid #ddd; text-align:center; font-size:11px; color:#666; line-height:1.6;">
-            <strong>潤泰集團 RUENTEX 潤弘精密工程事業股份有限公司</strong><br>
-            RTDC Designed by LINCY V1.0 | E-mail: RT023078@mail.ruentex.com.tw
-        </div>`;
-
-        container.innerHTML = html;
+        
+        container.innerHTML += html + '</tbody></table>';
+        container.innerHTML += `<div style="margin-top:20px; text-align:center; font-size:10px; color:#999; border-top:1px solid #eee; padding-top:10px;">潤弘精密工程 RTDC Developed by LINCY</div>`;
         document.body.appendChild(container);
 
-        exportBtn.innerText = txt.ptrLoading;
-        exportBtn.disabled = true;
+        exportBtn.innerText = "輸出中..."; exportBtn.disabled = true;
 
-        const opt = {
-            margin:       10,
-            filename:     `Inspection_Report_${new Date().getTime()}.pdf`,
-            image:        { type: 'jpeg', quality: 0.95 },
-            html2canvas:  { scale: 2, useCORS: true },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-
-        html2pdf().set(opt).from(container).save().then(() => {
-            document.body.removeChild(container);
-            updateRecordUI(); 
-            if(confirm(txt.alertExport)) clearDB();
-        }).catch(err => {
-            console.error(err);
-            document.body.removeChild(container);
-            updateRecordUI();
-        });
+        html2pdf().set({ margin: 10, filename: `RTDC_Report_${new Date().getTime()}.pdf`, image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(container).save().then(() => {
+            document.body.removeChild(container); updateRecordUI();
+            if(confirm("報表已生成！請問是否要清空目前的紀錄？")) clearDB();
+        }).catch(err => { document.body.removeChild(container); updateRecordUI(); });
     }
 </script>
 
