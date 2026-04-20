@@ -35,20 +35,20 @@
             --modal-bg: rgba(255,255,255,0.95);
         }
 
-        /* 終極防爆屏設定 */
+        /* 🚀 終極防爆屏設定：鎖死四周，禁止滾動 */
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "微軟正黑體", sans-serif; 
             margin: 0; padding: 0; background: #000; color: var(--text-main); 
             user-select: none; 
             position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
-            width: 100vw; height: 100dvh; 
+            width: 100%; height: 100%; 
             overflow: hidden; overscroll-behavior: none; 
         }
 
         #appContainer { display: flex; flex-direction: column; width: 100%; height: 100%; position: relative; z-index: 2; animation: appFadeIn 0.3s ease-out; }
         @keyframes appFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* 相機區域：填滿剩餘高度，徹底移除 video-container 避免排版干擾 */
+        /* 🚀 相機區域：無圓角、滿版填滿剩餘高度 */
         #cameraSection { 
             flex: 1 1 auto; min-height: 0; 
             position: relative; background: #000; 
@@ -61,7 +61,7 @@
         }
         
         #displayOverlay { 
-            position: absolute; left: 0; width: 100%; 
+            position: absolute; left: 0; width: 100%; bottom: 0; /* 預設貼底 */
             background: rgba(0, 0, 0, 0.6); padding: 10px 15px; box-sizing: border-box; 
             font-weight: bold; pointer-events: none; line-height: 1.4; word-wrap: break-word; 
             z-index: 10; 
@@ -74,7 +74,7 @@
         .export-btn.excel { background: #107c41; } 
         .export-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
-        /* 控制台：零圓角，完美水平切割 */
+        /* 🚀 控制台：設定為不壓縮 (flex-shrink: 0) 且水平切割無圓角 */
         #controlPanel { 
             flex-shrink: 0; 
             background: var(--bg-panel); padding: 15px; box-sizing: border-box; 
@@ -83,13 +83,27 @@
             border-radius: 0; 
         }
 
-        .pos-input-row { display: flex; gap: 8px; }
-        .prefix-box, .axis-box { display: flex; align-items: center; background: var(--input-bg); border-radius: 10px; flex: 1; height: 44px; }
+        .pos-input-row { display: flex; gap: 8px; width: 100%; box-sizing: border-box; }
+        .prefix-box, .axis-box { 
+            display: flex; align-items: center; background: var(--input-bg); 
+            border-radius: 10px; height: 44px; overflow: hidden; /* 防止內部超出 */
+        }
+        .prefix-box { flex: 1; }
         .axis-box { flex: 1.5; justify-content: center; }
+        
         .prefix-box .prefix { padding-left: 12px; font-weight: bold; color: var(--ios-blue); font-size: 16px; }
-        .prefix-box input, .axis-box input { flex: 1; background: transparent; color: var(--text-main); border: none; font-size: 16px; font-weight: 600; outline: none; text-align: center; }
+        
+        /* 🚀 關鍵修復：強制限制 input 最小寬度，防止撐破 Flex 容器 */
+        .prefix-box input, .axis-box input { 
+            flex: 1; 
+            min-width: 0; /* 破除預設寬度限制 */
+            width: 100%; 
+            background: transparent; color: var(--text-main); border: none; 
+            font-size: 16px; font-weight: 600; outline: none; text-align: center; 
+        }
         .prefix-box input { padding-left: 5px; text-align: left; }
         #posEng { text-transform: uppercase; }
+        .axis-box .pos-separator { font-size: 18px; font-weight: bold; color: var(--text-muted); margin: 0 5px; }
 
         .remark-input { width: 100%; height: 44px; background: var(--input-bg); color: var(--text-main); border: none; border-radius: 10px; font-size: 16px; font-weight: 600; text-align: center; outline: none; box-sizing: border-box; }
 
@@ -101,13 +115,18 @@
         .zoom-row { display: flex; align-items: center; justify-content: center; gap: 15px; color: var(--text-muted); font-size: 14px; font-weight: 600; }
         input[type=range] { flex: 1; accent-color: var(--ios-blue); height: 28px; }
         
-        /* 底部快門區域：向中靠攏設計 */
-        .shutter-row { display: flex; justify-content: center; align-items: center; gap: 35px; height: 75px; margin-top: 5px; }
-        .side-btn { height: 44px; padding: 0 22px; border-radius: 22px; background: var(--input-bg); border: none; color: var(--text-main); font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .shutter-row { display: flex; justify-content: center; align-items: center; position: relative; height: 75px; margin-top: 5px; }
+        .side-btn { 
+            position: absolute; height: 40px; padding: 0 20px; border-radius: 20px; 
+            background: var(--input-bg); border: none; color: var(--text-main); 
+            font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; 
+        }
+        .side-btn.left { left: 0; }
+        .side-btn.right { right: 0; }
         .side-btn:active { transform: scale(0.95); background: var(--input-border); }
         .side-btn:disabled { opacity: 0.3; cursor: not-allowed; }
         
-        .shutter-btn { width: 72px; height: 72px; border-radius: 50%; background: white; border: 4px solid #fff; cursor: pointer; box-shadow: 0 0 0 4px white inset, 0 0 15px rgba(0,0,0,0.3); transition: 0.1s; flex-shrink: 0; }
+        .shutter-btn { width: 72px; height: 72px; border-radius: 50%; background: white; border: 4px solid #fff; cursor: pointer; box-shadow: 0 0 0 4px white inset, 0 0 15px rgba(0,0,0,0.3); transition: 0.1s; z-index: 10; flex-shrink: 0; }
         .shutter-btn:active { transform: scale(0.9); background: #e5e5ea; }
 
         .company-footer { text-align: center; font-size: 9px; color: var(--text-muted); line-height: 1.5; margin-top: 5px; opacity: 0.7; }
@@ -136,24 +155,32 @@
         .map-header { padding: 15px; display: flex; justify-content: space-between; align-items: center; background: var(--modal-bg); border-bottom: 1px solid var(--input-border); backdrop-filter: blur(20px); z-index: 10; }
         .map-header h3 { margin: 0; font-size: 17px; font-weight: 600; color: var(--text-main); }
         #mapFloorSelector { background: var(--input-bg); color: var(--ios-blue); border: none; border-radius: 8px; padding: 4px 8px; font-weight: 600; font-size: 14px; outline: none; }
+        
         .map-canvas-container { flex: 1; position: relative; overflow: hidden; touch-action: none; cursor: crosshair; } 
         #mapCanvas { width: 100%; height: 100%; display: block; touch-action: none; }
 
         /* 照片詳情檢視器 Modal */
-        #photoViewerModal .modal-content { background: var(--bg-panel); width: 90%; max-width: 400px; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 15px 50px rgba(0,0,0,0.5); animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); padding: 0; }
+        #photoViewerModal .modal-content {
+            background: var(--bg-panel); width: 90%; max-width: 400px; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 15px 50px rgba(0,0,0,0.5); animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); padding: 0; 
+        }
+
         .viewer-image-container { width: 100%; aspect-ratio: 4/3; background: #000; position: relative; border-bottom: 1px solid var(--input-border); }
         #viewerImage { width: 100%; height: 100%; object-fit: contain; }
+
         .viewer-info-container { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
         .info-row { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(142, 142, 147, 0.1); padding-bottom: 8px; }
         .info-label { font-size: 13px; color: var(--text-muted); font-weight: 500; width: 80px; flex-shrink: 0; }
         .info-value { font-size: 14px; color: var(--text-main); font-weight: 600; text-align: right; word-wrap: break-word; }
+
         .info-row-remark { flex-direction: column; gap: 4px; border-bottom: none; }
         #viewerRemark { text-align: left; color: var(--text-main); background: var(--input-bg); padding: 12px; border-radius: 8px; width: 100%; box-sizing: border-box; min-height: 40px; font-weight: 600; }
+
         .viewer-footer { padding: 0 20px 20px; display: flex; justify-content: center; }
         .btn-viewer-close { background: var(--ios-blue); color: #fff; font-weight: 700; font-size: 16px; height: 44px; width: 100%; border-radius: 12px; border: none; cursor: pointer; }
         .btn-viewer-close:active { opacity: 0.8; }
 
         #canvas { display: none; }
+        #ptrIndicator { display: none !important; }
     </style>
 </head>
 <body class="dark-theme">
@@ -190,9 +217,9 @@
             <div class="zoom-row"><span>1x</span><input type="range" id="zoomSlider" min="1" max="3" step="0.1" value="1"><span>3x</span></div>
             
             <div class="shutter-row">
-                <button class="side-btn" onclick="openMap()">平面圖</button>
+                <button class="side-btn left" onclick="openMap()">平面圖</button>
                 <button class="shutter-btn" onclick="takePicture()"></button>
-                <button class="side-btn" id="uiBtnUndo" onclick="deleteLastPhoto()" disabled>刪除</button>
+                <button class="side-btn right" id="uiBtnUndo" onclick="deleteLastPhoto()" disabled>刪除</button>
             </div>
             
             <div class="company-footer">
@@ -314,20 +341,27 @@
     <canvas id="canvas"></canvas>
 
 <script>
+    // --- 安全的 DOM 獲取 ---
     const displayOverlay = document.getElementById('displayOverlay');
     const video = document.getElementById('videoElement');
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
+    
+    // 控制面板輸入
     const posFloor = document.getElementById('posFloor');
     const posNum = document.getElementById('posNum');
     const posEng = document.getElementById('posEng');
     const remarkInput = document.getElementById('remarkInput');
+    
+    // 設定面板輸入
     const sysTheme = document.getElementById('sysTheme');
     const wmColor = document.getElementById('wmColor');
     const wmSize = document.getElementById('wmSize');
     const wmPosition = document.getElementById('wmPosition');
     const userName = document.getElementById('userName');
     const showUserInWM = document.getElementById('showUserInWM');
+    
+    // 按鈕
     const exportBtn = document.getElementById('uiBtnExport');
     const exportBtnExcel = document.getElementById('uiBtnExportExcel');
     const btnUndo = document.getElementById('uiBtnUndo');
@@ -335,19 +369,20 @@
     let db, inspectionRecords = [], currentZoom = 1, currentDirKey = "none";
     let mapIsOpen = false, mapZoom = 1, mapPanX = 0, mapPanY = 0;
     let isMapDragging = false, mapStartX = 0, mapStartY = 0, initialPinchDist = null, initialZoom = 1;
+
     let lastRenderedPointBoxes = [];
 
-    // 純淨無字的模擬相機
+    // --- 乾淨無字的虛擬相機 ---
     function startSimulatedCamera() {
         const simCanvas = document.createElement('canvas');
-        simCanvas.width = 1080; simCanvas.height = 1920; 
+        simCanvas.width = 1920; simCanvas.height = 1080;
         const simCtx = simCanvas.getContext('2d');
         let angle = 0;
         function drawSim() {
             simCtx.fillStyle = '#1c1c1e'; simCtx.fillRect(0, 0, simCanvas.width, simCanvas.height);
             simCtx.save(); simCtx.translate(simCanvas.width / 2, simCanvas.height / 2); simCtx.rotate(angle);
             simCtx.fillStyle = '#007AFF'; simCtx.fillRect(-150, -150, 300, 300);
-            simCtx.restore(); angle += 0.02;
+            simCtx.restore(); angle += 0.01;
             requestAnimationFrame(drawSim);
         }
         drawSim();
@@ -362,6 +397,7 @@
         } catch (err) { startSimulatedCamera(); }
         
         window.addEventListener('resize', () => { if(mapIsOpen) renderMap(); });
+        
         const mCanvas = document.getElementById('mapCanvas');
         if(mCanvas) {
             mCanvas.addEventListener('touchstart', handleMapTouchStart, {passive: false});
@@ -370,9 +406,10 @@
             mCanvas.addEventListener('wheel', handleMapWheel, {passive: false});
             mCanvas.addEventListener('click', handleMapClick); 
         }
-        updateWatermarkPreview();
+        updateWatermarkPreview(); // 初始化時呼叫一次確保浮水印位置正確
     };
 
+    // --- IndexedDB ---
     function initIndexedDB() {
         const req = indexedDB.open("InspectionDB", 1);
         req.onupgradeneeded = e => e.target.result.createObjectStore("records", { keyPath: "id", autoIncrement: true });
@@ -384,7 +421,12 @@
         tx.objectStore("records").getAll().onsuccess = e => { inspectionRecords = e.target.result; updateRecordUI(); if(mapIsOpen) renderMap(); };
     }
     function clearDB() { const tx = db.transaction(["records"], "readwrite"); tx.objectStore("records").clear(); tx.oncomplete = () => { inspectionRecords = []; updateRecordUI(); }; }
-    function manualClearAll() { if(inspectionRecords.length === 0) return; if(confirm("警告：這將會永久刪除所有已拍攝的紀錄與照片！\n確定要清空嗎？")) { clearDB(); closeSettings(); } }
+    
+    function manualClearAll() { 
+        if(inspectionRecords.length === 0) return; 
+        if(confirm("警告：這將會永久刪除所有已拍攝的紀錄與照片！\n確定要清空嗎？")) { clearDB(); closeSettings(); } 
+    }
+    
     function deleteLastPhoto() {
         if (inspectionRecords.length === 0 || !confirm("確定要刪除「上一張」照片紀錄嗎？\n資料將從資料庫中永久移除。")) return;
         const tx = db.transaction(["records"], "readwrite");
@@ -392,6 +434,7 @@
         tx.oncomplete = () => loadRecordsFromDB();
     }
 
+    // --- UI 控制 ---
     function applyTheme() {
         if(!sysTheme) return;
         const isLight = sysTheme.value === 'light';
@@ -410,6 +453,7 @@
     function openHelp() { document.getElementById('helpModal').style.display = 'flex'; }
     function closeHelp() { document.getElementById('helpModal').style.display = 'none'; }
 
+    // --- 📸 照片檢視器 ---
     function openPhotoViewer(recordId) {
         const record = inspectionRecords.find(r => r.id === recordId);
         if (!record) return;
@@ -425,6 +469,7 @@
         document.getElementById('photoViewerModal').style.display = 'none';
     }
 
+    // --- 🗺️ 平面圖引擎 ---
     function loadImageAsync(src) { return new Promise(resolve => { const img = new Image(); img.onload = () => resolve(img); img.src = src; }); }
 
     function openMap() {
@@ -449,13 +494,21 @@
         if (!mapIsOpen || lastRenderedPointBoxes.length === 0) return;
         const cvs = document.getElementById('mapCanvas');
         const rect = cvs.getBoundingClientRect();
+        
         const dpr = window.devicePixelRatio || 1;
         const physClickX = (e.clientX - rect.left) * dpr;
         const physClickY = (e.clientY - rect.top) * dpr;
 
         for (let pt of lastRenderedPointBoxes) {
-            const bx = pt.physBox.x; const by = pt.physBox.y; const bw = pt.physBox.w; const bh = pt.physBox.h;
-            if (physClickX >= bx && physClickX <= bx + bw && physClickY >= by && physClickY <= by + bh) { openPhotoViewer(pt.recordId); return; }
+            const bx = pt.physBox.x;
+            const by = pt.physBox.y;
+            const bw = pt.physBox.w;
+            const bh = pt.physBox.h;
+
+            if (physClickX >= bx && physClickX <= bx + bw && physClickY >= by && physClickY <= by + bh) {
+                openPhotoViewer(pt.recordId);
+                return; 
+            }
         }
     }
 
@@ -532,7 +585,7 @@
         minX = Math.max(1, Math.floor(minX) - 1); maxX = Math.ceil(maxX) + 1; minY = Math.floor(minY) - 1; maxY = Math.ceil(maxY) + 1;
         let gridW = maxX - minX; let gridH = maxY - minY;
 
-        const padX = isExport ? 200 * dpr : cvs.width * 0.1; 
+        const padX = isExport ? 200 * dpr : cvs.width * 0.15; 
         const padY = isExport ? 200 * dpr : cvs.height * 0.15;
         const baseScale = Math.min((cvs.width - padX * 2) / gridW, (cvs.height - padY * 2) / gridH); 
         
@@ -649,7 +702,7 @@
         
         displayOverlay.innerHTML = html; 
         
-        // 🚀 精準控制：根據設定將 Overlay 鎖在相機區的上方或下方
+        // 🚀 動態控制位置，精準貼合 cameraSection 邊緣
         if (activePos === "top") {
             displayOverlay.style.top = "0px";
             displayOverlay.style.bottom = "auto";
