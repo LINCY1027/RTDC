@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" id="themeColorMeta" content="#000000">
+    <title>RTDC工程相機</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        :root {
+            color-scheme: dark; 
+            --bg-main: #000000;
+            --bg-panel: #1c1c1e;
+            --text-main: #ffffff;
+            --text-muted: #8e8e93;
+            --input-bg: #2c2c2e;
+            --input-border: #3a3a3c;
+            --seg-active: #636366;
+            --modal-bg: #2c2c2e;
+            --ios-blue: #007AFF;
+        }
+
+        body.light-theme {
+            color-scheme: light; 
+            --bg-main: #f2f2f7; 
+            --bg-panel: #ffffff;
+            --text-main: #000000;
+            --text-muted: #666666;
+            --input-bg: #f2f2f7;
+            --input-border: #d1d1d6;
+            --seg-active: #ffffff;
+            --modal-bg: rgba(255,255,255,0.95);
+        }
+
+        /* 🚀 終極防爆屏設定：鎖死四周，禁止滾動 */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "微軟正黑體", sans-serif; 
+            margin: 0; padding: 0; background: #000; color: var(--text-main); 
+            user-select: none; 
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+            width: 100%; height: 100%; 
+            overflow: hidden; overscroll-behavior: none; 
+        }
+
+        #appContainer { display: flex; flex-direction: column; width: 100%; height: 100%; position: relative; z-index: 2; animation: appFadeIn 0.3s ease-out; }
+        @keyframes appFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* 🚀 相機區域：無圓角、滿版填滿剩餘高度 */
+        #cameraSection { 
+            flex: 1 1 auto; min-height: 0; 
+            position: relative; background: #000; 
+            overflow: hidden; width: 100%;
+        }
+        
+        #videoElement { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            object-fit: cover; z-index: 1; 
+        }
+        
+        #displayOverlay { 
+            position: absolute; left: 0; width: 100%; bottom: 0; /* 預設貼底 */
+            background: rgba(0, 0, 0, 0.6); padding: 10px 15px; box-sizing: border-box; 
+            font-weight: bold; pointer-events: none; line-height: 1.4; word-wrap: break-word; 
+            z-index: 10; 
+        }
+
+        .top-bar { position: absolute; top: 15px; left: 0; width: 100%; padding: 0 15px; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; z-index: 20; }
+        .fab-settings { background: rgba(0, 0, 0, 0.6); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 16px; font-size: 15px; font-weight: 600; border-radius: 20px; backdrop-filter: blur(10px); cursor: pointer; }
+        .export-group { display: flex; gap: 8px; }
+        .export-btn { background: #FF3B30; color: #fff; border: none; padding: 8px 12px; font-size: 14px; font-weight: bold; border-radius: 12px; cursor: pointer; }
+        .export-btn.excel { background: #107c41; } 
+        .export-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* 🚀 控制台：設定為不壓縮 (flex-shrink: 0) 且水平切割無圓角 */
+        #controlPanel { 
+            flex-shrink: 0; 
+            background: var(--bg-panel); padding: 15px; box-sizing: border-box; 
+            display: flex; flex-direction: column; gap: 12px; z-index: 30; 
+            border-top: 1px solid var(--input-border);
+            border-radius: 0; 
+        }
+
+        .pos-input-row { display: flex; gap: 8px; width: 100%; box-sizing: border-box; }
+        .prefix-box, .axis-box { 
+            display: flex; align-items: center; background: var(--input-bg); 
+            border-radius: 10px; height: 44px; overflow: hidden; /* 防止內部超出 */
+        }
+        .prefix-box { flex: 1; }
+        .axis-box { flex: 1.5; justify-content: center; }
+        
+        .prefix-box .prefix { padding-left: 12px; font-weight: bold; color: var(--ios-blue); font-size: 16px; }
+        
+        /* 🚀 關鍵修復：強制限制 input 最小寬度，防止撐破 Flex 容器 */
+        .prefix-box input, .axis-box input { 
+            flex: 1; 
+            min-width: 0; /* 破除預設寬度限制 */
+            width: 100%; 
+            background: transparent; color: var(--text-main); border: none; 
+            font-size: 16px; font-weight: 600; outline: none; text-align: center; 
+        }
+        .prefix-box input { padding-left: 5px; text-align: left; }
+        #posEng { text-transform: uppercase; }
+        .axis-box .pos-separator { font-size: 18px; font-weight: bold; color: var(--text-muted); margin: 0 5px; }
+
+        .remark-input { width: 100%; height: 44px; background: var(--input-bg); color: var(--text-main); border: none; border-radius: 10px; font-size: 16px; font-weight: 600; text-align: center; outline: none; box-sizing: border-box; }
+
+        .segmented-control { display: flex; background: var(--input-bg); border-radius: 8px; padding: 2px; gap: 2px; height: 32px; align-items: center; }
+        .seg-btn { flex: 1; border: none; background: transparent; color: var(--text-main); font-size: 13px; font-weight: 600; border-radius: 7px; height: 100%; cursor: pointer; transition: 0.1s; }
+        .seg-btn.active { background: var(--seg-active); color: var(--ios-blue); box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+        .light-theme .seg-btn.active { background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+
+        .zoom-row { display: flex; align-items: center; justify-content: center; gap: 15px; color: var(--text-muted); font-size: 14px; font-weight: 600; }
+        input[type=range] { flex: 1; accent-color: var(--ios-blue); height: 28px; }
+        
+        .shutter-row { display: flex; justify-content: center; align-items: center; position: relative; height: 75px; margin-top: 5px; }
+        .side-btn { 
+            position: absolute; height: 40px; padding: 0 20px; border-radius: 20px; 
+            background: var(--input-bg); border: none; color: var(--text-main); 
+            font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; 
+        }
+        .side-btn.left { left: 0; }
+        .side-btn.right { right: 0; }
+        .side-btn:active { transform: scale(0.95); background: var(--input-border); }
+        .side-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        
+        .shutter-btn { width: 72px; height: 72px; border-radius: 50%; background: white; border: 4px solid #fff; cursor: pointer; box-shadow: 0 0 0 4px white inset, 0 0 15px rgba(0,0,0,0.3); transition: 0.1s; z-index: 10; flex-shrink: 0; }
+        .shutter-btn:active { transform: scale(0.9); background: #e5e5ea; }
+
+        .company-footer { text-align: center; font-size: 9px; color: var(--text-muted); line-height: 1.5; margin-top: 5px; opacity: 0.7; }
+
+        /* 模態視窗 */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0, 0, 0, 0.6); z-index: 100; display: none; justify-content: center; align-items: center; backdrop-filter: blur(10px); animation: modalBgFadeIn 0.2s ease; }
+        @keyframes modalBgFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .settings-content, .help-content { background: var(--modal-bg); color: var(--text-main); width: 85%; max-width: 320px; max-height: 85vh; overflow-y: auto; border-radius: 14px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .help-content { white-space: pre-wrap; line-height: 1.6; font-size: 14px; color: var(--text-muted); }
+        @keyframes popIn { from { transform: scale(0.9) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+        
+        .input-group { background: var(--input-bg); border-radius: 10px; padding: 10px 15px; margin-bottom: 12px; }
+        .input-group label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 3px; font-weight: 700; text-transform: uppercase; }
+        .input-group select, .input-group input { width: 100%; border: none; font-size: 16px; font-weight: 600; color: var(--text-main); outline: none; background: transparent; }
+        
+        .modal-btn { width: 100%; height: 44px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 10px; transition: 0.2s; }
+        .modal-btn-done { background: var(--ios-blue); color: white; }
+        .modal-btn-info { background: var(--input-bg); color: var(--text-main); }
+        .modal-btn-danger { background: rgba(255, 59, 48, 0.1); color: #FF3B30; }
+        .modal-btn:active { opacity: 0.7; }
+
+        /* 平面圖視窗 */
+        .map-content { background: var(--bg-main); width: 100%; height: 100%; display: flex; flex-direction: column; animation: slideUpMap 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideUpMap { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .map-header { padding: 15px; display: flex; justify-content: space-between; align-items: center; background: var(--modal-bg); border-bottom: 1px solid var(--input-border); backdrop-filter: blur(20px); z-index: 10; }
+        .map-header h3 { margin: 0; font-size: 17px; font-weight: 600; color: var(--text-main); }
+        #mapFloorSelector { background: var(--input-bg); color: var(--ios-blue); border: none; border-radius: 8px; padding: 4px 8px; font-weight: 600; font-size: 14px; outline: none; }
+        
+        .map-canvas-container { flex: 1; position: relative; overflow: hidden; touch-action: none; cursor: crosshair; } 
+        #mapCanvas { width: 100%; height: 100%; display: block; touch-action: none; }
+
+        /* 照片詳情檢視器 Modal */
+        #photoViewerModal .modal-content {
+            background: var(--bg-panel); width: 90%; max-width: 400px; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 15px 50px rgba(0,0,0,0.5); animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); padding: 0; 
+        }
+
+        .viewer-image-container { width: 100%; aspect-ratio: 4/3; background: #000; position: relative; border-bottom: 1px solid var(--input-border); }
+        #viewerImage { width: 100%; height: 100%; object-fit: contain; }
+
+        .viewer-info-container { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .info-row { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(142, 142, 147, 0.1); padding-bottom: 8px; }
+        .info-label { font-size: 13px; color: var(--text-muted); font-weight: 500; width: 80px; flex-shrink: 0; }
+        .info-value { font-size: 14px; color: var(--text-main); font-weight: 600; text-align: right; word-wrap: break-word; }
+
+        .info-row-remark { flex-direction: column; gap: 4px; border-bottom: none; }
+        #viewerRemark { text-align: left; color: var(--text-main); background: var(--input-bg); padding: 12px; border-radius: 8px; width: 100%; box-sizing: border-box; min-height: 40px; font-weight: 600; }
+
+        .viewer-footer { padding: 0 20px 20px; display: flex; justify-content: center; }
+        .btn-viewer-close { background: var(--ios-blue); color: #fff; font-weight: 700; font-size: 16px; height: 44px; width: 100%; border-radius: 12px; border: none; cursor: pointer; }
+        .btn-viewer-close:active { opacity: 0.8; }
+
+        #canvas { display: none; }
+        #ptrIndicator { display: none !important; }
+    </style>
+</head>
+<body class="dark-theme">
+
+    <div id="appContainer">
+        <div id="cameraSection">
+            <div class="top-bar">
+                <button class="fab-settings" onclick="openSettings()">設定</button>
+                <div class="export-group">
+                    <button class="export-btn" id="uiBtnExport" onclick="exportPDF()" disabled>PDF (0)</button>
+                    <button class="export-btn excel" id="uiBtnExportExcel" onclick="exportTrueExcel()" disabled>EXCEL</button>
+                </div>
+            </div>
+            <video id="videoElement" autoplay playsinline muted></video>
+            <div id="displayOverlay"></div>
+        </div>
+
+        <div id="controlPanel">
+            <div class="pos-input-row">
+                <div class="prefix-box"><span class="prefix">L</span><input type="number" id="posFloor" placeholder="樓層" min="1"></div>
+                <div class="axis-box"><input type="text" id="posEng" placeholder="英文"><span class="pos-separator">/</span><input type="number" id="posNum" placeholder="數字" step="any" min="0.1"></div>
+            </div>
+            <input type="text" id="remarkInput" class="remark-input" placeholder="備註 (選填)">
+            
+            <div class="segmented-control">
+                <button class="seg-btn active" id="dirNone" onclick="setDirection('none')">無</button>
+                <button class="seg-btn" id="dirE" onclick="setDirection('E')">東</button>
+                <button class="seg-btn" id="dirW" onclick="setDirection('W')">西</button>
+                <button class="seg-btn" id="dirS" onclick="setDirection('S')">南</button>
+                <button class="seg-btn" id="dirN" onclick="setDirection('N')">北</button>
+                <button class="seg-btn" id="dirC" onclick="setDirection('C')">中</button>
+            </div>
+
+            <div class="zoom-row"><span>1x</span><input type="range" id="zoomSlider" min="1" max="3" step="0.1" value="1"><span>3x</span></div>
+            
+            <div class="shutter-row">
+                <button class="side-btn left" onclick="openMap()">平面圖</button>
+                <button class="shutter-btn" onclick="takePicture()"></button>
+                <button class="side-btn right" id="uiBtnUndo" onclick="deleteLastPhoto()" disabled>刪除</button>
+            </div>
+            
+            <div class="company-footer">
+                潤泰集團 RUENTEX 潤弘精密工程事業股份有限公司<br>
+                RTDC Designed by LINCY | RT023078@mail.ruentex.com.tw
+            </div>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="modal-overlay">
+        <div class="settings-content">
+            <div style="text-align:center; font-weight:700; margin-bottom:15px; font-size:17px;">系統設定</div>
+            
+            <div class="input-group">
+                <label>拍攝者</label>
+                <input type="text" id="userName" placeholder="請輸入姓名..." oninput="updateWatermarkPreview()">
+                <div class="toggle-group" style="margin-top:10px; border-top:1px solid var(--input-border); padding-top:10px;">
+                    <span style="font-size:13px; font-weight:600;">顯示於浮水印</span>
+                    <input type="checkbox" id="showUserInWM" checked onchange="updateWatermarkPreview()" style="width:auto;">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>平面圖網格垮距 (m)</label>
+                <input type="number" id="mapSpan" value="11" min="1" onchange="if(mapIsOpen) renderMap()">
+            </div>
+            <div class="input-group">
+                <label>平面圖柱子大小 (m)</label>
+                <input type="number" id="mapColSize" value="1" min="0.1" step="0.1" onchange="if(mapIsOpen) renderMap()">
+            </div>
+
+            <div class="input-group" style="display:flex; justify-content:space-between; align-items:center;">
+                <label style="margin:0;">風格主題</label>
+                <select id="sysTheme" onchange="applyTheme()" style="width:auto; color:var(--ios-blue);">
+                    <option value="dark">深色模式</option>
+                    <option value="light">淺色模式</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label>浮水印顏色</label>
+                <select id="wmColor" onchange="updateWatermarkPreview()">
+                    <option value="#FFD60A">黃色</option>
+                    <option value="#FFFFFF">白色</option>
+                    <option value="#FF3B30">紅色</option>
+                    <option value="#32D74B">綠色</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>浮水印大小</label>
+                <input type="range" id="wmSize" min="0.6" max="1.5" step="0.1" value="1.0" oninput="updateWatermarkPreview()" style="height:20px;">
+            </div>
+            <div class="input-group" style="display:flex; justify-content:space-between; align-items:center;">
+                <label style="margin:0;">浮水印位置</label>
+                <select id="wmPosition" onchange="updateWatermarkPreview()" style="width:auto; color:var(--ios-blue);">
+                    <option value="bottom">相片底部</option>
+                    <option value="top">相片頂部</option>
+                </select>
+            </div>
+
+            <button class="modal-btn modal-btn-info" onclick="openHelp()">使用說明</button>
+            <button class="modal-btn modal-btn-danger" onclick="manualClearAll()">清空數據</button>
+            <button class="modal-btn modal-btn-done" onclick="closeSettings()" style="margin-top:20px;">完成</button>
+        </div>
+    </div>
+
+    <div id="helpModal" class="modal-overlay">
+        <div class="help-content">
+            <div style="text-align:center; font-weight:700; margin-bottom:15px;">使用說明</div>
+            <div id="uiHelpContent">1. 輸入樓層與軸線(英文/數字)<br>2. 選擇拍攝方位與填寫備註<br>3. 按下快門拍照，照片將壓印浮水印並儲存<br>4. 點擊「平面圖」檢視坐標分佈<br>5. 點擊平面圖上的照片編號可放大檢視詳情<br>6. 點擊頂部匯出 PDF 或 EXCEL 報表</div>
+            <button class="modal-btn modal-btn-done" onclick="closeHelp()">我知道了</button>
+        </div>
+    </div>
+
+    <div id="mapModal" class="modal-overlay">
+        <div class="map-content">
+            <div class="map-header">
+                <button class="fab-settings" onclick="closeMap()" style="color:var(--ios-blue); background:transparent; padding-left:0; box-shadow:none;">完成</button>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <h3 style="font-size:16px;">坐標分佈</h3>
+                    <select id="mapFloorSelector" onchange="renderMap()"></select>
+                </div>
+            </div>
+            <div class="map-canvas-container">
+                <canvas id="mapCanvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div id="photoViewerModal" class="modal-overlay" onclick="closePhotoViewer(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="viewer-image-container">
+                <img id="viewerImage" src="" alt="現場照片">
+            </div>
+            <div class="viewer-info-container">
+                <div class="info-row">
+                    <span class="info-label">坐標位置</span>
+                    <span class="info-value" id="viewerAxis"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">樓層</span>
+                    <span class="info-value" id="viewerFloor"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">時間</span>
+                    <span class="info-value" id="viewerTime" style="font-size: 12px;"></span>
+                </div>
+                <div class="info-row info-row-remark">
+                    <span class="info-label">備註</span>
+                    <div id="viewerRemark"></div>
+                </div>
+            </div>
+            <div class="viewer-footer">
+                <button class="btn-viewer-close" onclick="closePhotoViewer()">關閉</button>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+<script>
+    // --- 安全的 DOM 獲取 ---
+    const displayOverlay = document.getElementById('displayOverlay');
+    const video = document.getElementById('videoElement');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // 控制面板輸入
+    const posFloor = document.getElementById('posFloor');
+    const posNum = document.getElementById('posNum');
+    const posEng = document.getElementById('posEng');
+    const remarkInput = document.getElementById('remarkInput');
+    
+    // 設定面板輸入
+    const sysTheme = document.getElementById('sysTheme');
+    const wmColor = document.getElementById('wmColor');
+    const wmSize = document.getElementById('wmSize');
+    const wmPosition = document.getElementById('wmPosition');
+    const userName = document.getElementById('userName');
+    const showUserInWM = document.getElementById('showUserInWM');
+    
+    // 按鈕
+    const exportBtn = document.getElementById('uiBtnExport');
+    const exportBtnExcel = document.getElementById('uiBtnExportExcel');
+    const btnUndo = document.getElementById('uiBtnUndo');
+
+    let db, inspectionRecords = [], currentZoom = 1, currentDirKey = "none";
+    let mapIsOpen = false, mapZoom = 1, mapPanX = 0, mapPanY = 0;
+    let isMapDragging = false, mapStartX = 0, mapStartY = 0, initialPinchDist = null, initialZoom = 1;
+
+    let lastRenderedPointBoxes = [];
+
+    // --- 乾淨無字的虛擬相機 ---
+    function startSimulatedCamera() {
+        const simCanvas = document.createElement('canvas');
+        simCanvas.width = 1920; simCanvas.height = 1080;
+        const simCtx = simCanvas.getContext('2d');
+        let angle = 0;
+        function drawSim() {
+            simCtx.fillStyle = '#1c1c1e'; simCtx.fillRect(0, 0, simCanvas.width, simCanvas.height);
+            simCtx.save(); simCtx.translate(simCanvas.width / 2, simCanvas.height / 2); simCtx.rotate(angle);
+            simCtx.fillStyle = '#007AFF'; simCtx.fillRect(-150, -150, 300, 300);
+            simCtx.restore(); angle += 0.01;
+            requestAnimationFrame(drawSim);
+        }
+        drawSim();
+        stream = simCanvas.captureStream(30); video.srcObject = stream; video.play().catch(e => console.log(e));
+    }
+
+    window.onload = async () => {
+        applyTheme(); initIndexedDB();
+        try { 
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } }); 
+            video.srcObject = stream;
+        } catch (err) { startSimulatedCamera(); }
+        
+        window.addEventListener('resize', () => { if(mapIsOpen) renderMap(); });
+        
+        const mCanvas = document.getElementById('mapCanvas');
+        if(mCanvas) {
+            mCanvas.addEventListener('touchstart', handleMapTouchStart, {passive: false});
+            mCanvas.addEventListener('touchmove', handleMapTouchMove, {passive: false});
+            mCanvas.addEventListener('touchend', handleMapTouchEnd);
+            mCanvas.addEventListener('wheel', handleMapWheel, {passive: false});
+            mCanvas.addEventListener('click', handleMapClick); 
+        }
+        updateWatermarkPreview(); // 初始化時呼叫一次確保浮水印位置正確
+    };
+
+    // --- IndexedDB ---
+    function initIndexedDB() {
+        const req = indexedDB.open("InspectionDB", 1);
+        req.onupgradeneeded = e => e.target.result.createObjectStore("records", { keyPath: "id", autoIncrement: true });
+        req.onsuccess = e => { db = e.target.result; loadRecordsFromDB(); };
+    }
+    function saveRecordToDB(record) { const tx = db.transaction(["records"], "readwrite"); tx.objectStore("records").add(record); tx.oncomplete = () => loadRecordsFromDB(); }
+    function loadRecordsFromDB() {
+        const tx = db.transaction(["records"], "readonly");
+        tx.objectStore("records").getAll().onsuccess = e => { inspectionRecords = e.target.result; updateRecordUI(); if(mapIsOpen) renderMap(); };
+    }
+    function clearDB() { const tx = db.transaction(["records"], "readwrite"); tx.objectStore("records").clear(); tx.oncomplete = () => { inspectionRecords = []; updateRecordUI(); }; }
+    
+    function manualClearAll() { 
+        if(inspectionRecords.length === 0) return; 
+        if(confirm("警告：這將會永久刪除所有已拍攝的紀錄與照片！\n確定要清空嗎？")) { clearDB(); closeSettings(); } 
+    }
+    
+    function deleteLastPhoto() {
+        if (inspectionRecords.length === 0 || !confirm("確定要刪除「上一張」照片紀錄嗎？\n資料將從資料庫中永久移除。")) return;
+        const tx = db.transaction(["records"], "readwrite");
+        tx.objectStore("records").openCursor(null, 'prev').onsuccess = e => { if (e.target.result) e.target.result.delete(); };
+        tx.oncomplete = () => loadRecordsFromDB();
+    }
+
+    // --- UI 控制 ---
+    function applyTheme() {
+        if(!sysTheme) return;
+        const isLight = sysTheme.value === 'light';
+        document.body.classList.toggle('light-theme', isLight);
+        const meta = document.getElementById('themeColorMeta');
+        if(meta) meta.setAttribute('content', isLight ? '#f2f2f7' : '#000000');
+        if(mapIsOpen) renderMap();
+    }
+    function setDirection(key) {
+        currentDirKey = key;
+        document.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.id === 'dir' + key.charAt(0).toUpperCase() + key.slice(1)));
+        updateWatermarkPreview();
+    }
+    function openSettings() { document.getElementById('settingsModal').style.display = 'flex'; }
+    function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
+    function openHelp() { document.getElementById('helpModal').style.display = 'flex'; }
+    function closeHelp() { document.getElementById('helpModal').style.display = 'none'; }
+
+    // --- 📸 照片檢視器 ---
+    function openPhotoViewer(recordId) {
+        const record = inspectionRecords.find(r => r.id === recordId);
+        if (!record) return;
+        document.getElementById('viewerImage').src = record.img;
+        document.getElementById('viewerAxis').innerText = `${record.axis} / ${record.dir || "無"}`;
+        document.getElementById('viewerFloor').innerText = record.floor || "無";
+        document.getElementById('viewerTime').innerText = record.time;
+        document.getElementById('viewerRemark').innerText = record.rm || "無備註";
+        document.getElementById('photoViewerModal').style.display = 'flex';
+    }
+    function closePhotoViewer(event) {
+        if (event && event.target !== document.getElementById('photoViewerModal')) return;
+        document.getElementById('photoViewerModal').style.display = 'none';
+    }
+
+    // --- 🗺️ 平面圖引擎 ---
+    function loadImageAsync(src) { return new Promise(resolve => { const img = new Image(); img.onload = () => resolve(img); img.src = src; }); }
+
+    function openMap() {
+        mapZoom = 1; mapPanX = 0; mapPanY = 0;
+        const floorSel = document.getElementById('mapFloorSelector');
+        if(!floorSel) return;
+        const currentVal = floorSel.value;
+        floorSel.innerHTML = '<option value="all">全部樓層</option>';
+        
+        let floors = [...new Set(inspectionRecords.map(r => r.floor).filter(f => f && f !== '-'))].sort();
+        floors.forEach(f => { floorSel.innerHTML += `<option value="${f}">${f}</option>`; });
+        
+        if (floors.includes(currentVal)) { floorSel.value = currentVal; } 
+        else if (floors.length > 0) { floorSel.value = floors[floors.length - 1]; }
+        
+        document.getElementById('mapModal').style.display = 'flex';
+        mapIsOpen = true; setTimeout(renderMap, 100);
+    }
+    function closeMap() { document.getElementById('mapModal').style.display = 'none'; mapIsOpen = false; }
+
+    function handleMapClick(e) {
+        if (!mapIsOpen || lastRenderedPointBoxes.length === 0) return;
+        const cvs = document.getElementById('mapCanvas');
+        const rect = cvs.getBoundingClientRect();
+        
+        const dpr = window.devicePixelRatio || 1;
+        const physClickX = (e.clientX - rect.left) * dpr;
+        const physClickY = (e.clientY - rect.top) * dpr;
+
+        for (let pt of lastRenderedPointBoxes) {
+            const bx = pt.physBox.x;
+            const by = pt.physBox.y;
+            const bw = pt.physBox.w;
+            const bh = pt.physBox.h;
+
+            if (physClickX >= bx && physClickX <= bx + bw && physClickY >= by && physClickY <= by + bh) {
+                openPhotoViewer(pt.recordId);
+                return; 
+            }
+        }
+    }
+
+    function getDistance(touches) { return Math.sqrt(Math.pow(touches[0].clientX - touches[1].clientX, 2) + Math.pow(touches[0].clientY - touches[1].clientY, 2)); }
+    function handleMapTouchStart(e) {
+        if (e.touches.length === 1) { isMapDragging = true; mapStartX = e.touches[0].clientX - mapPanX; mapStartY = e.touches[0].clientY - mapPanY; }
+        else if (e.touches.length === 2) { isMapDragging = false; initialPinchDist = getDistance(e.touches); initialZoom = mapZoom; }
+    }
+    function handleMapTouchMove(e) {
+        e.preventDefault(); 
+        if (e.touches.length === 1 && isMapDragging) { mapPanX = e.touches[0].clientX - mapStartX; mapPanY = e.touches[0].clientY - mapStartY; renderMap(); }
+        else if (e.touches.length === 2 && initialPinchDist) {
+            mapZoom = initialZoom * (getDistance(e.touches) / initialPinchDist);
+            if (mapZoom < 0.5) mapZoom = 0.5; if (mapZoom > 10) mapZoom = 10;
+            renderMap();
+        }
+    }
+    function handleMapTouchEnd(e) { if (e.touches.length < 2) initialPinchDist = null; if (e.touches.length === 0) isMapDragging = false; }
+    function handleMapWheel(e) {
+        e.preventDefault(); mapZoom += e.deltaY * -0.001;
+        if (mapZoom < 0.5) mapZoom = 0.5; if (mapZoom > 10) mapZoom = 10;
+        renderMap();
+    }
+
+    async function renderMap() {
+        const cvs = document.getElementById('mapCanvas');
+        if(!cvs) return;
+        const dpr = window.devicePixelRatio || 1;
+        const rect = cvs.parentElement.getBoundingClientRect();
+        cvs.width = rect.width * dpr; cvs.height = rect.height * dpr;
+        await drawMapOnCanvas(cvs, document.getElementById('mapFloorSelector').value, dpr, sysTheme ? sysTheme.value : 'dark');
+    }
+
+    async function drawMapOnCanvas(cvs, selectedFloor, dpr, themeStyle) {
+        const ctx = cvs.getContext('2d');
+        const isLight = themeStyle.includes('light');
+        const isExport = themeStyle.includes('export');
+        
+        ctx.fillStyle = isLight ? '#f2f2f7' : '#111111';
+        ctx.fillRect(0, 0, cvs.width, cvs.height);
+
+        const gridLineColor = isLight ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)';
+        const columnColor = isLight ? 'rgba(0, 0, 0, 0.4)' : 'rgba(255, 255, 255, 0.6)';
+        const axisTextColor = '#007AFF';
+
+        const customSpan = parseFloat(document.getElementById('mapSpan').value) || 11;
+        const customColSize = parseFloat(document.getElementById('mapColSize').value) || 1;
+        
+        let points = [];
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+
+        inspectionRecords.forEach((r, i) => {
+            if (selectedFloor !== 'all' && r.floor !== selectedFloor) return;
+            let parts = r.axis.split('/');
+            if(parts.length === 2) {
+                let eng = parts[0].trim(); let num = parseFloat(parts[1].trim());
+                if(eng && eng !== '-' && !isNaN(num) && num > 0) {
+                    let y = 0; for(let c=0; c<eng.length; c++) { y = y * 26 + (eng.charCodeAt(c) - 64); }
+                    if (y > 0) {
+                        points.push({ x: num, y: y, num: i + 1, img: r.img, id: r.id });
+                        if(num < minX) minX = num; if(num > maxX) maxX = num;
+                        if(y < minY) minY = y; if(y > maxY) maxY = y;
+                    }
+                }
+            }
+        });
+
+        if(points.length === 0) {
+            ctx.fillStyle = '#8e8e93'; ctx.font = `600 ${18 * dpr}px sans-serif`; ctx.textAlign = 'center';
+            ctx.fillText(selectedFloor === 'all' ? "無坐標資料可繪製" : `${selectedFloor} 無坐標資料`, cvs.width/2, cvs.height/2);
+            lastRenderedPointBoxes = []; return;
+        }
+
+        minX = Math.max(1, Math.floor(minX) - 1); maxX = Math.ceil(maxX) + 1; minY = Math.floor(minY) - 1; maxY = Math.ceil(maxY) + 1;
+        let gridW = maxX - minX; let gridH = maxY - minY;
+
+        const padX = isExport ? 200 * dpr : cvs.width * 0.15; 
+        const padY = isExport ? 200 * dpr : cvs.height * 0.15;
+        const baseScale = Math.min((cvs.width - padX * 2) / gridW, (cvs.height - padY * 2) / gridH); 
+        
+        let z = isExport ? 1 : mapZoom;
+        let px = isExport ? 0 : mapPanX;
+        let py = isExport ? 0 : mapPanY;
+
+        ctx.save();
+        ctx.translate(cvs.width/2 + px * dpr, cvs.height/2 + py * dpr);
+        ctx.scale(z, z);
+        ctx.translate(-cvs.width/2, -cvs.height/2);
+
+        const cx = cvs.width / 2 - (gridW * baseScale) / 2;
+        const cy = cvs.height / 2 - (gridH * baseScale) / 2;
+        function getScreenPt(x, y) { return { sx: cx + (x - minX) * baseScale, sy: cy + (y - minY) * baseScale }; }
+
+        ctx.strokeStyle = gridLineColor; ctx.lineWidth = (2 * dpr) / z; ctx.beginPath();
+        for(let x = Math.floor(minX); x <= Math.ceil(maxX); x++) { let p1 = getScreenPt(x, minY); let p2 = getScreenPt(x, maxY); ctx.moveTo(p1.sx, p1.sy); ctx.lineTo(p2.sx, p2.sy); }
+        for(let y = Math.floor(minY); y <= Math.ceil(maxY); y++) { let p1 = getScreenPt(minX, y); let p2 = getScreenPt(maxX, y); ctx.moveTo(p1.sx, p1.sy); ctx.lineTo(p2.sx, p2.sy); }
+        ctx.stroke();
+
+        let colSizeRender = baseScale * (customColSize / customSpan); 
+        ctx.fillStyle = columnColor;
+        for(let x = Math.floor(minX); x <= Math.ceil(maxX); x++) {
+            for(let y = Math.floor(minY); y <= Math.ceil(maxY); y++) {
+                let p = getScreenPt(x, y); ctx.fillRect(p.sx - colSizeRender/2, p.sy - colSizeRender/2, colSizeRender, colSizeRender);
+                ctx.font = `600 ${(13 * dpr)/z}px sans-serif`;
+                if(y === Math.floor(minY)) { ctx.fillStyle = axisTextColor; ctx.textAlign = 'center'; ctx.fillText(x.toString(), p.sx, p.sy - (12*dpr)/z); }
+                if(x === Math.floor(minX)) { ctx.fillStyle = axisTextColor; ctx.textAlign = 'right'; let letter = "", tempY = y; while(tempY > 0) { letter = String.fromCharCode(65 + (tempY-1)%26) + letter; tempY = Math.floor((tempY-1)/26); } ctx.fillText(letter, p.sx - (12*dpr)/z, p.sy + (5*dpr)/z); }
+                ctx.fillStyle = columnColor;
+            }
+        }
+
+        const imgW = (80 * dpr) / z; const imgH = (60 * dpr) / z;
+        const boxes = [];
+        const labelH = (16 * dpr) / z; const fontSize = (11 * dpr) / z;
+        const gridBox = { x: cx - (30*dpr)/z, y: cy - (30*dpr)/z, w: (gridW*baseScale)+(60*dpr)/z, h: (gridH*baseScale)+(60*dpr)/z };
+
+        lastRenderedPointBoxes = [];
+        for(let pt of points) pt.imgObj = await loadImageAsync(pt.img);
+
+        for (let pt of points) {
+            let pScreen = getScreenPt(pt.x, pt.y);
+            let r = 0, angle = 0, placed = false, bestBox = null;
+            let spiralStep = (12 * dpr) / z;
+
+            while (!placed && r < 5000 * dpr) {
+                let tx = pScreen.sx + r * Math.cos(angle); let ty = pScreen.sy + r * Math.sin(angle);
+                let box = { x: tx - imgW/2, y: ty - imgH/2, w: imgW, h: imgH };
+                
+                let collide = (box.x < gridBox.x + gridBox.w && box.x + box.w > gridBox.x && box.y < gridBox.y + gridBox.h && box.y + box.h > gridBox.y);
+                if (!collide) { for(let b of boxes) { if(box.x < b.x + b.w + (10*dpr)/z && box.x + box.w + (10*dpr)/z > b.x && box.y < b.y + b.h + (labelH+10*dpr)/z && box.y + box.h + (10*dpr)/z > b.y) { collide = true; break; } } }
+                if (!collide) { bestBox = box; placed = true; }
+                angle += 0.4; r += spiralStep;
+            }
+
+            if (bestBox) {
+                boxes.push(bestBox);
+                
+                ctx.beginPath(); ctx.moveTo(pScreen.sx, pScreen.sy); ctx.lineTo(bestBox.x + bestBox.w/2, bestBox.y + bestBox.h/2);
+                ctx.strokeStyle = isLight ? 'rgba(60,60,67,0.3)' : 'rgba(235,235,245,0.3)'; ctx.lineWidth = (1.5 * dpr) / z; ctx.stroke();
+                ctx.beginPath(); ctx.arc(pScreen.sx, pScreen.sy, (4 * dpr)/z, 0, Math.PI * 2); ctx.fillStyle = '#FF3B30'; ctx.fill();
+
+                const cornerR = (8 * dpr) / z; const totalH = bestBox.h + labelH; const topY = bestBox.y - labelH;
+
+                ctx.fillStyle = isLight ? '#ffffff' : '#1c1c1e';
+                ctx.beginPath();
+                ctx.moveTo(bestBox.x + cornerR, topY); ctx.lineTo(bestBox.x + bestBox.w - cornerR, topY); ctx.arcTo(bestBox.x + bestBox.w, topY, bestBox.x + bestBox.w, topY + cornerR, cornerR);
+                ctx.lineTo(bestBox.x + bestBox.w, topY + totalH - cornerR); ctx.arcTo(bestBox.x + bestBox.w, topY + totalH, bestBox.x + bestBox.w - cornerR, topY + totalH, cornerR);
+                ctx.lineTo(bestBox.x + cornerR, topY + totalH); ctx.arcTo(bestBox.x, topY + totalH, bestBox.x, topY + totalH - cornerR, cornerR);
+                ctx.lineTo(bestBox.x, topY + cornerR); ctx.arcTo(bestBox.x, topY, bestBox.x + cornerR, topY, cornerR); ctx.closePath(); ctx.fill();
+                
+                ctx.strokeStyle = isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'; ctx.lineWidth = (1 * dpr) / z; ctx.stroke();
+
+                ctx.save(); ctx.beginPath(); const innerR = Math.max(0, cornerR - (1*dpr/z));
+                ctx.moveTo(bestBox.x + innerR, bestBox.y); ctx.lineTo(bestBox.x + bestBox.w - innerR, bestBox.y); ctx.arcTo(bestBox.x + bestBox.w, bestBox.y, bestBox.x + bestBox.w, bestBox.y + innerR, innerR);
+                ctx.lineTo(bestBox.x + bestBox.w, bestBox.y + bestBox.h - innerR); ctx.arcTo(bestBox.x + bestBox.w, bestBox.y + bestBox.h, bestBox.x + bestBox.w - innerR, bestBox.y + bestBox.h, innerR);
+                ctx.lineTo(bestBox.x + innerR, bestBox.y + bestBox.h); ctx.arcTo(bestBox.x, bestBox.y + bestBox.h, bestBox.x, bestBox.y + bestBox.h - innerR, innerR);
+                ctx.lineTo(bestBox.x, bestBox.y + innerR); ctx.arcTo(bestBox.x, bestBox.y, bestBox.x + innerR, bestBox.y, innerR); ctx.clip();
+                if (pt.imgObj) { ctx.drawImage(pt.imgObj, bestBox.x, bestBox.y, bestBox.w, bestBox.h); } ctx.restore();
+
+                ctx.fillStyle = '#007AFF'; ctx.font = `600 ${fontSize}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(`No.${pt.num}`, bestBox.x + bestBox.w/2, topY + labelH/2);
+
+                const matrix = ctx.getTransform();
+                lastRenderedPointBoxes.push({
+                    recordId: pt.id,
+                    physBox: { x: matrix.a * bestBox.x + matrix.c * topY + matrix.e, y: matrix.b * bestBox.x + matrix.d * topY + matrix.f, w: bestBox.w * matrix.a, h: totalH * matrix.d, labelH: labelH * matrix.d }
+                });
+            }
+        }
+        ctx.restore();
+    }
+
+    // --- 相機拍攝與匯出 ---
+    [posFloor, posNum, posEng, remarkInput].forEach(el => el.addEventListener('input', () => { if(el.id === 'posEng') el.value = el.value.toUpperCase(); updateWatermarkPreview(); }));
+
+    function updateWatermarkPreview() {
+        const fl = posFloor.value.trim(), num = posNum.value.trim(), eng = posEng.value.trim(), rm = remarkInput.value.trim(), user = userName ? userName.value.trim() : "";
+        let floorStr = fl ? `L${fl}` : "", axisStr = (eng || num) ? `${eng || "-"}/${num || "-"}` : "";
+        let dirText = currentDirKey === "none" ? "" : currentDirKey;
+        let infoArr = [floorStr, axisStr, dirText, rm].filter(Boolean);
+        let mainStr = infoArr.join('  ') || "未輸入位置";
+        
+        const activeColor = wmColor ? wmColor.value : '#FFD60A';
+        const activeSize = wmSize ? parseFloat(wmSize.value) : 1.0;
+        const activePos = wmPosition ? wmPosition.value : 'bottom';
+        
+        const fs = 20 * activeSize;
+
+        let html = `<div style="color: ${activeColor}; font-size: ${fs}px; font-weight: bold; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);">${mainStr}`;
+        let timeStr = new Date().toLocaleString() + (user && showUserInWM && showUserInWM.checked ? `  (${user})` : "");
+        html += `<br><span style="color: white; font-size: 0.6em; font-weight: normal;">${timeStr}</span></div>`;
+        
+        displayOverlay.innerHTML = html; 
+        
+        // 🚀 動態控制位置，精準貼合 cameraSection 邊緣
+        if (activePos === "top") {
+            displayOverlay.style.top = "0px";
+            displayOverlay.style.bottom = "auto";
+        } else {
+            displayOverlay.style.top = "auto";
+            displayOverlay.style.bottom = "0px";
+        }
+    }
+
+    document.getElementById('zoomSlider').addEventListener('input', e => { currentZoom = e.target.value; video.style.transform = `scale(${currentZoom})`; });
+
+    function wrapText(context, text, x, y, maxWidth, lineHeight) {
+        var words = text.split('  '); if(words.length === 1) words = text.split(' '); var line = ''; var currentY = y;
+        for (var n = 0; n < words.length; n++) {
+            var testLine = line + words[n] + '  '; var metrics = context.measureText(testLine);
+            if (metrics.width > maxWidth && n > 0) { context.fillText(line, x, currentY); line = words[n] + '  '; currentY += lineHeight; } else { line = testLine; }
+        }
+        context.fillText(line, x, currentY); return currentY + lineHeight;
+    }
+
+    function takePicture() {
+        if (!video.videoWidth) return;
+        const fl = posFloor.value.trim(), num = posNum.value.trim(), eng = posEng.value.trim(), rm = remarkInput.value.trim();
+        if (!fl && !num && !eng) if(!confirm("您尚未輸入完整位置，確定要直接拍照嗎？")) return;
+
+        canvas.width = 1024; canvas.height = 768;
+        const targetAspect = 1024 / 768, zw = video.videoWidth / currentZoom, zh = video.videoHeight / currentZoom;
+        const zx = (video.videoWidth - zw) / 2, zy = (video.videoHeight - zh) / 2;
+        let sW, sH, sX, sY;
+        if (zw / zh > targetAspect) { sH = zh; sW = sH * targetAspect; sX = zx + (zw - sW) / 2; sY = zy; } else { sW = zw; sH = sW / targetAspect; sX = zx; sY = zy + (zh - sH) / 2; }
+        ctx.drawImage(video, sX, sY, sW, sH, 0, 0, canvas.width, canvas.height);
+
+        let floorStr = fl ? `L${fl}` : "", axisStr = (eng || num) ? `${eng || "-"}/${num || "-"}` : "";
+        let dirText = currentDirKey === "none" ? "" : currentDirKey;
+        let timeStr = new Date().toLocaleString(); const user = userName ? userName.value.trim() : ""; 
+        if (user && showUserInWM && showUserInWM.checked) timeStr += `  (${user})`;
+
+        const activeSize = wmSize ? parseFloat(wmSize.value) : 1.0;
+        const activeColor = wmColor ? wmColor.value : '#FFD60A';
+        const activePos = wmPosition ? wmPosition.value : 'bottom';
+
+        const ufs = Math.floor(canvas.width / 30) * activeSize;
+        const margin = canvas.width * 0.02; const maxWidth = canvas.width - (margin * 2); const lineH = ufs * 1.2;
+        
+        ctx.font = `bold ${ufs}px "微軟正黑體", sans-serif`; ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+
+        const infoFullText = [floorStr, axisStr, dirText, rm].filter(Boolean).join('  ');
+        let testLines = 1, words = infoFullText.split('  '), line = '';
+        for(let n=0; n<words.length; n++){ let testLine = line + words[n] + '  '; if(ctx.measureText(testLine).width > maxWidth && n > 0){ testLines++; line = words[n] + '  '; } else { line = testLine; } }
+        
+        const totalBoxHeight = (testLines * lineH) + (ufs * 1.0);
+        const boxY = activePos === "top" ? 0 : canvas.height - totalBoxHeight;
+
+        ctx.fillRect(0, boxY, canvas.width, totalBoxHeight);
+        
+        ctx.fillStyle = activeColor; let nextY = wrapText(ctx, infoFullText, margin, boxY + ufs, maxWidth, lineH);
+        ctx.font = `normal ${ufs * 0.6}px "微軟正黑體", sans-serif`; ctx.fillStyle = "white"; ctx.fillText(timeStr, margin, nextY - (lineH * 0.3));
+
+        const sequence = inspectionRecords.length + 1;
+        let locForFile = [floorStr, axisStr.replace(/\//g, '-')].filter(Boolean).join(' ');
+        const fileName = `${locForFile}_${dirText}_${rm}_${user}_${sequence}.jpg`.replace(/_none_/g, '_').replace(/_+/g, '_').replace(/^_/, '');
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.85);
+        const link = document.createElement('a'); link.download = fileName; link.href = imgData; link.click();
+        saveRecordToDB({ floor: floorStr, axis: axisStr, dir: dirText, rm: rm, user: user, time: timeStr, img: imgData, id: Date.now() });
+
+        const cameraSec = document.getElementById('cameraSection');
+        const flash = document.createElement('div');
+        flash.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:#fff;z-index:99;opacity:1;transition:opacity 0.2s ease-out;';
+        cameraSec.appendChild(flash);
+        setTimeout(() => { flash.style.opacity = '0'; }, 50);
+        setTimeout(() => { cameraSec.removeChild(flash); }, 250);
+    }
+
+    function updateRecordUI() { 
+        exportBtn.innerText = `PDF (${inspectionRecords.length})`; exportBtn.disabled = inspectionRecords.length === 0; 
+        exportBtnExcel.innerText = `EXCEL (${inspectionRecords.length})`; exportBtnExcel.disabled = inspectionRecords.length === 0;
+        btnUndo.disabled = inspectionRecords.length === 0;
+    }
+
+    async function exportTrueExcel() {
+        if (inspectionRecords.length === 0) return;
+        exportBtnExcel.innerText = "輸出中..."; exportBtnExcel.disabled = true;
+
+        try {
+            const workbook = new ExcelJS.Workbook();
+            const sheet = workbook.addWorksheet('巡察報告 Report');
+            sheet.columns = [{ header: '項次', key: 'no', width: 8 }, { header: '現場照片', key: 'img', width: 35 }, { header: '樓層', key: 'floor', width: 12 }, { header: '坐標', key: 'axis', width: 15 }, { header: '方位', key: 'dir', width: 10 }, { header: '拍攝者', key: 'user', width: 15 }, { header: '備註', key: 'rm', width: 30 }, { header: '時間', key: 'time', width: 22 }];
+            sheet.getRow(1).font = { bold: true, size: 12 }; sheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' }; sheet.getRow(1).height = 25;
+
+            for (let i = 0; i < inspectionRecords.length; i++) {
+                const r = inspectionRecords[i], rowIndex = i + 2;
+                sheet.addRow({ no: i + 1, floor: r.floor, axis: r.axis, dir: r.dir, user: r.user, rm: r.rm, time: r.time });
+                const row = sheet.getRow(rowIndex); row.height = 120; row.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                const imageId = workbook.addImage({ base64: r.img, extension: 'jpeg' });
+                sheet.addImage(imageId, { tl: { col: 1, row: rowIndex - 1 }, ext: { width: 200, height: 150 }, editAs: 'oneCell' });
+            }
+
+            let floors = [...new Set(inspectionRecords.map(r => r.floor).filter(f => f && f !== '-'))].sort();
+            if(floors.length === 0) floors.push('all');
+            for (let f of floors) {
+                const offCvs = document.createElement('canvas'); offCvs.width = 2400; offCvs.height = 1800; 
+                await drawMapOnCanvas(offCvs, f, 2, 'light_export'); 
+                const safeName = f === 'all' ? "全部" : f; 
+                const mapSheet = workbook.addWorksheet(`平面圖 - ${safeName}`.substring(0, 31));
+                mapSheet.addImage(workbook.addImage({ base64: offCvs.toDataURL('image/jpeg', 0.8), extension: 'jpeg' }), { tl: { col: 0, row: 0 }, ext: { width: 1200, height: 900 } });
+            }
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })); a.download = `RTDC_Report_${new Date().getTime()}.xlsx`; a.click();
+            if(confirm("報表已生成！請問是否要清空目前的紀錄？")) clearDB();
+        } catch(err) { console.error(err); alert("EXCEL 匯出失敗"); } finally { exportBtnExcel.innerText = `EXCEL (${inspectionRecords.length})`; exportBtnExcel.disabled = false; }
+    }
+
+    function exportPDF() {
+        if (inspectionRecords.length === 0) return;
+        const container = document.createElement('div');
+        container.style = 'padding:15px; background:#fff; color:#000; position:absolute; left:-9999px; width:800px; font-family:sans-serif;';
+        container.innerHTML = `<h2 style="text-align:center; color:#333; margin-bottom:5px;">現場巡察報告</h2><p style="text-align:center; font-size:12px; color:#666; margin:0 0 15px 0;">生成時間: ${new Date().toLocaleString()}</p>`;
+        
+        let html = '<table style="width:100%; border-collapse:collapse; font-size:12px; table-layout:fixed; border:1px solid #ddd;">';
+        html += '<thead style="background:#f5f5f7;"><tr><th style="border:1px solid #ddd; padding:8px; width:5%;">項次</th><th style="border:1px solid #ddd; padding:8px; width:35%;">現場照片</th><th style="border:1px solid #ddd; padding:8px; width:15%;">坐標/方位</th><th style="border:1px solid #ddd; padding:8px; width:30%;">缺失情況(備註)</th><th style="border:1px solid #ddd; padding:8px; width:15%;">拍攝資訊</th></tr></thead><tbody>';
+        
+        inspectionRecords.forEach((r, i) => {
+            html += `<tr>
+                <td style="border:1px solid #ddd; padding:8px; text-align:center;">${i+1}</td>
+                <td style="border:1px solid #ddd; padding:8px; text-align:center;"><img src="${r.img}" style="max-width:100%; height:auto; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.2);"></td>
+                <td style="border:1px solid #ddd; padding:8px; text-align:center; font-weight:bold;">${r.floor}<br><span style="color:#d9534f;">${r.axis}</span><br>${r.dir}</td>
+                <td style="border:1px solid #ddd; padding:8px; color:#e67e22; font-weight:bold;">${r.rm || "-"}</td>
+                <td style="border:1px solid #ddd; padding:8px; font-size:10px; color:#666;">${r.user || "未知"}<br>${r.time}</td>
+            </tr>`;
+        });
+        
+        container.innerHTML += html + '</tbody></table>';
+        container.innerHTML += `<div style="margin-top:20px; text-align:center; font-size:10px; color:#999; border-top:1px solid #eee; padding-top:10px;">潤弘精密工程 RTDC Developed by LINCY</div>`;
+        document.body.appendChild(container);
+
+        exportBtn.innerText = "輸出中..."; exportBtn.disabled = true;
+
+        html2pdf().set({ margin: 10, filename: `RTDC_Report_${new Date().getTime()}.pdf`, image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(container).save().then(() => {
+            document.body.removeChild(container); updateRecordUI();
+            if(confirm("報表已生成！請問是否要清空目前的紀錄？")) clearDB();
+        }).catch(err => { document.body.removeChild(container); updateRecordUI(); });
+    }
+</script>
+
+</body>
+</html>
