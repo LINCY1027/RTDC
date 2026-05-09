@@ -95,7 +95,7 @@
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0, 0, 0, 0.6); z-index: 100; display: none; justify-content: center; align-items: center; backdrop-filter: blur(10px); animation: modalBgFadeIn 0.2s ease; }
         @keyframes modalBgFadeIn { from { opacity: 0; } to { opacity: 1; } }
         
-        .settings-content, .help-content { background: var(--modal-bg); color: var(--text-main); width: 85%; max-width: 320px; max-height: 85vh; overflow-y: auto; border-radius: 14px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .settings-content, .help-content { background: var(--modal-bg); color: var(--text-main); width: 85%; max-width: 340px; max-height: 85vh; overflow-y: auto; border-radius: 14px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         .help-content { white-space: pre-wrap; line-height: 1.6; font-size: 14px; color: var(--text-muted); }
         @keyframes popIn { from { transform: scale(0.9) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
         
@@ -125,6 +125,16 @@
         .map-canvas-container { flex: 1; position: relative; overflow: hidden; touch-action: none; cursor: grab; } 
         .map-canvas-container:active { cursor: grabbing; }
         #mapCanvas { width: 100%; height: 100%; display: block; touch-action: none; }
+
+        /* 地圖專屬工具列 */
+        .map-footer { 
+            background: var(--modal-bg); border-top: 1px solid var(--input-border); 
+            padding: 15px 20px; padding-bottom: calc(15px + env(safe-area-inset-bottom));
+            display: flex; align-items: center; gap: 15px; z-index: 10; backdrop-filter: blur(20px);
+        }
+        .map-footer label { font-size: 13px; font-weight: 600; color: var(--text-muted); flex-shrink: 0; margin:0; }
+        .map-footer input[type=range] { flex: 1; margin: 0; height: 20px; }
+        .map-footer span { font-size: 14px; font-weight: 700; color: var(--ios-blue); flex-shrink: 0; width: 35px; text-align: right; }
 
         #photoViewerModal .modal-content { background: var(--bg-panel); width: 90%; max-width: 400px; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 15px 50px rgba(0,0,0,0.5); animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); padding: 0; }
         .viewer-image-container { width: 100%; aspect-ratio: 4/3; background: #000; position: relative; border-bottom: 1px solid var(--input-border); }
@@ -195,70 +205,70 @@
             
             <div class="input-group">
                 <label id="lblUser">拍攝者</label>
-                <input type="text" id="userName" placeholder="請輸入姓名..." oninput="updateWatermarkPreview()">
+                <input type="text" id="userName" placeholder="請輸入姓名..." oninput="updateWatermarkPreview(); saveSettings();">
                 <div class="toggle-container" style="border:none; padding:0;">
                     <label id="lblShowUser">顯示於浮水印</label>
-                    <input type="checkbox" id="showUserInWM" checked onchange="updateWatermarkPreview()" style="width:auto; transform: scale(1.2);">
+                    <input type="checkbox" id="showUserInWM" checked onchange="updateWatermarkPreview(); saveSettings();" style="width:auto; transform: scale(1.2);">
                 </div>
             </div>
 
             <div class="input-group">
                 <label id="lblMapGridX">X軸網格範圍 (數字)</label>
                 <div class="range-inputs">
-                    <input type="number" id="gridXStart" placeholder="起" onchange="if(mapIsOpen) renderMap()">
+                    <input type="number" id="gridXStart" placeholder="起" onchange="saveSettings(); if(mapIsOpen) renderMap();">
                     <span>-</span>
-                    <input type="number" id="gridXEnd" placeholder="迄" onchange="if(mapIsOpen) renderMap()">
+                    <input type="number" id="gridXEnd" placeholder="迄" onchange="saveSettings(); if(mapIsOpen) renderMap();">
                 </div>
             </div>
 
             <div class="input-group">
                 <label id="lblMapGridY">Y軸網格範圍 (英文)</label>
                 <div class="range-inputs">
-                    <input type="text" id="gridYStart" placeholder="起" onchange="if(mapIsOpen) renderMap()" style="text-transform: uppercase;">
+                    <input type="text" id="gridYStart" placeholder="起" oninput="this.value = this.value.toUpperCase();" onchange="saveSettings(); if(mapIsOpen) renderMap();" style="text-transform: uppercase;">
                     <span>-</span>
-                    <input type="text" id="gridYEnd" placeholder="迄" onchange="if(mapIsOpen) renderMap()" style="text-transform: uppercase;">
+                    <input type="text" id="gridYEnd" placeholder="迄" oninput="this.value = this.value.toUpperCase();" onchange="saveSettings(); if(mapIsOpen) renderMap();" style="text-transform: uppercase;">
                 </div>
             </div>
 
             <div class="input-group">
                 <div class="toggle-container" style="border:none; margin:0; padding:0;">
                     <label id="lblHalfStep">啟用 0.5 輔助軸線</label>
-                    <input type="checkbox" id="halfStepMode" onchange="if(mapIsOpen) renderMap()" style="width:auto; transform: scale(1.2);">
+                    <input type="checkbox" id="halfStepMode" onchange="saveSettings(); if(mapIsOpen) renderMap();" style="width:auto; transform: scale(1.2);">
                 </div>
             </div>
 
             <div class="input-group" style="display:flex; justify-content:space-between; align-items:center;">
                 <label style="margin:0;" id="lblMapSpan">垮距(m)</label>
-                <input type="number" id="mapSpan" value="11" min="1" style="width:60px; text-align:right;" onchange="if(mapIsOpen) renderMap()">
+                <input type="number" id="mapSpan" value="11" min="1" style="width:60px; text-align:right;" onchange="saveSettings(); if(mapIsOpen) renderMap();">
             </div>
             
             <div class="input-group" style="display:flex; justify-content:space-between; align-items:center;">
                 <label style="margin:0;" id="lblMapCol">柱寬(m)</label>
-                <input type="number" id="mapColSize" value="1" min="0.1" step="0.1" style="width:60px; text-align:right;" onchange="if(mapIsOpen) renderMap()">
+                <input type="number" id="mapColSize" value="1" min="0.1" step="0.1" style="width:60px; text-align:right;" onchange="saveSettings(); if(mapIsOpen) renderMap();">
             </div>
 
             <div class="input-group">
                 <label id="lblMapDir">平面圖方向反轉</label>
                 <div class="toggle-container" style="border:none; margin:0; padding:0;">
-                    <span id="lblRevX">數字軸 (X) 反轉</span>
-                    <input type="checkbox" id="revX" onchange="if(mapIsOpen) renderMap()" style="width:auto; transform: scale(1.2);">
+                    <span id="lblRevX">數字軸 (X向) 反轉</span>
+                    <input type="checkbox" id="revX" onchange="saveSettings(); if(mapIsOpen) renderMap();" style="width:auto; transform: scale(1.2);">
                 </div>
                 <div class="toggle-container" style="margin-top:8px;">
-                    <span id="lblRevY">英文軸 (Y) 反轉</span>
-                    <input type="checkbox" id="revY" onchange="if(mapIsOpen) renderMap()" style="width:auto; transform: scale(1.2);">
+                    <span id="lblRevY">英文軸 (Y向) 反轉</span>
+                    <input type="checkbox" id="revY" onchange="saveSettings(); if(mapIsOpen) renderMap();" style="width:auto; transform: scale(1.2);">
                 </div>
             </div>
 
             <div class="input-group" style="display:flex; justify-content:space-between; align-items:center;">
                 <label style="margin:0;" id="lblTheme">風格主題</label>
-                <select id="sysTheme" onchange="applyTheme()" style="width:auto; color:var(--ios-blue);">
+                <select id="sysTheme" onchange="applyTheme(); saveSettings();" style="width:auto; color:var(--ios-blue);">
                     <option value="dark" id="optThemeDark">深色模式</option>
                     <option value="light" id="optThemeLight">淺色模式</option>
                 </select>
             </div>
             <div class="input-group" style="display:flex; justify-content:space-between; align-items:center;">
                 <label style="margin:0;" id="lblLang">介面語言</label>
-                <select id="sysLang" onchange="applyLanguage()" style="width:auto; color:var(--ios-blue);">
+                <select id="sysLang" onchange="applyLanguage(); saveSettings();" style="width:auto; color:var(--ios-blue);">
                     <option value="zh" id="optLangZh">繁體中文</option>
                     <option value="en" id="optLangEn">English</option>
                 </select>
@@ -266,7 +276,7 @@
 
             <div class="input-group">
                 <label id="lblColor">浮水印顏色</label>
-                <select id="wmColor" onchange="updateWatermarkPreview()">
+                <select id="wmColor" onchange="updateWatermarkPreview(); saveSettings();">
                     <option value="#FFD60A" id="optColorYellow">黃色</option>
                     <option value="#FFFFFF" id="optColorWhite">白色</option>
                     <option value="#FF3B30" id="optColorRed">紅色</option>
@@ -279,12 +289,12 @@
                     <label id="lblSize">浮水印大小</label>
                     <span id="wmSizeVal" style="color:var(--ios-blue); font-weight:600; font-size:14px;">1.0x</span>
                 </div>
-                <input type="range" id="wmSize" min="0.6" max="1.5" step="0.1" value="1.0" oninput="updateWatermarkPreview(); document.getElementById('wmSizeVal').innerText = this.value + 'x';">
+                <input type="range" id="wmSize" min="0.6" max="1.5" step="0.1" value="1.0" oninput="updateWatermarkPreview(); document.getElementById('wmSizeVal').innerText = this.value + 'x'; saveSettings();">
             </div>
 
             <div class="input-group" style="display:flex; justify-content:space-between; align-items:center;">
                 <label style="margin:0;" id="lblPos">浮水印位置</label>
-                <select id="wmPosition" onchange="updateWatermarkPreview()" style="width:auto; color:var(--ios-blue);">
+                <select id="wmPosition" onchange="updateWatermarkPreview(); saveSettings();" style="width:auto; color:var(--ios-blue);">
                     <option value="bottom" id="optPosBot">相片底部</option>
                     <option value="top" id="optPosTop">相片頂部</option>
                 </select>
@@ -309,12 +319,19 @@
             <div class="map-header">
                 <button id="uiBtnCloseMap" onclick="closeMap()" style="background:transparent; border:none; color:var(--ios-blue); font-size:17px; font-weight:600; padding:0; cursor:pointer;">完成</button>
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <h3 style="font-size:16px;" id="uiMapTitle">坐標分佈</h3>
+                    <h3 style="font-size:16px;" id="uiMapTitle">平面圖</h3>
                     <select id="mapFloorSelector" onchange="renderMap()"></select>
                 </div>
             </div>
+            
             <div class="map-canvas-container" id="mapDragContainer">
                 <canvas id="mapCanvas"></canvas>
+            </div>
+
+            <div class="map-footer">
+                <label id="lblMapImgSize">照片大小</label>
+                <input type="range" id="mapImgSize" min="0.5" max="2.0" step="0.1" value="1.0" oninput="document.getElementById('mapImgSizeVal').innerText = this.value + 'x'; saveSettings(); renderMap();">
+                <span id="mapImgSizeVal">1.0x</span>
             </div>
         </div>
     </div>
@@ -359,6 +376,7 @@
             uiModalTitle: "系統與設定", lblUser: "拍攝者", lblShowUser: "顯示於浮水印", 
             lblMapGridX: "X軸網格範圍 (數字)", lblMapGridY: "Y軸網格範圍 (英文)", lblHalfStep: "啟用 0.5 輔助軸線",
             lblMapSpan: "垮距(m)", lblMapCol: "柱寬(m)", lblMapDir: "平面圖方向反轉", lblRevX: "數字軸 (X向) 反轉", lblRevY: "英文軸 (Y向) 反轉",
+            lblMapImgSize: "照片大小",
             lblLang: "介面語言", optLangZh: "繁體中文", optLangEn: "English",
             lblTheme: "風格主題", optThemeDark: "深色模式", optThemeLight: "淺色模式", 
             lblColor: "浮水印顏色", optColorYellow: "黃色", optColorWhite: "白色", optColorRed: "紅色", optColorGreen: "綠色",
@@ -370,7 +388,7 @@
             confirmManualClear: "警告：這將會永久刪除所有已拍攝的紀錄與照片！\n確定要清空嗎？",
             mapAllFloors: "全部樓層", noMapData: "無有效座標可繪製",
             uiHelpTitle: "使用說明", uiBtnCloseHelp: "我知道了",
-            uiHelpContent: "1. 輸入樓層與軸線 (支援如 G.5 等小數點)\n2. 選擇拍攝方位與填寫備註\n3. 按下快門，照片將自動壓印浮水印並儲存\n4. 點擊「平面圖」可檢視帶有照片與引線的座標分佈 (支援滑鼠與觸控拖曳)\n5. 在「設定」中可鎖定平面圖的網格範圍、啟用 0.5 輔助軸線，及反轉座標方向\n6. 點擊「刪除」可快速撤銷上一張照片\n7. 點擊頂部可匯出 PDF 或 原生 EXCEL 報表 (包含平面圖)"
+            uiHelpContent: "1. 輸入樓層與軸線 (支援如 G.5 等小數點)\n2. 選擇拍攝方位與填寫備註\n3. 按下快門，照片將自動壓印浮水印並儲存\n4. 點擊「平面圖」可檢視帶有照片的座標分佈\n5. 平面圖下方可直接調整照片顯示大小\n6. 在「設定」中可鎖定網格範圍，避免破版\n7. 點擊頂部可匯出 PDF 或 原生 EXCEL 報表"
         },
         en: {
             dirNone: "None", dirE: "E", dirW: "W", dirS: "S", dirN: "N", dirC: "C",
@@ -379,6 +397,7 @@
             uiModalTitle: "Settings", lblUser: "Photographer", lblShowUser: "Show in WM", 
             lblMapGridX: "X-Axis Range", lblMapGridY: "Y-Axis Range", lblHalfStep: "Enable 0.5 Sub-grid",
             lblMapSpan: "Span(m)", lblMapCol: "Col(m)", lblMapDir: "Map Direction", lblRevX: "Reverse Num (X)", lblRevY: "Reverse Eng (Y)",
+            lblMapImgSize: "Photo Size",
             lblLang: "Language", optLangZh: "繁體中文", optLangEn: "English",
             lblTheme: "Theme", optThemeDark: "Dark Mode", optThemeLight: "Light Mode", 
             lblColor: "WM Color", optColorYellow: "Yellow", optColorWhite: "White", optColorRed: "Red", optColorGreen: "Green",
@@ -390,7 +409,7 @@
             confirmManualClear: "Warning: This will permanently delete ALL records and photos!\nAre you sure?",
             mapAllFloors: "All Floors", noMapData: "No valid coordinates",
             uiHelpTitle: "User Manual", uiBtnCloseHelp: "Got it",
-            uiHelpContent: "1. Enter Floor and Axis (Supports decimals like G.5)\n2. Select Direction & add Remark\n3. Tap shutter to save photo with watermark\n4. Use 'Plan' to view photo distribution with leader lines (Drag/Zoom enabled)\n5. Fix grid ranges, enable 0.5 step, or reverse axis in Settings\n6. Tap 'Delete' to undo the last photo\n7. Export PDF or EXCEL reports (Plan included) from top bar"
+            uiHelpContent: "1. Enter Floor and Axis (Supports decimals like G.5)\n2. Select Direction & add Remark\n3. Tap shutter to save photo with watermark\n4. Use 'Plan' to view photo distribution with leader lines (Drag/Zoom enabled)\n5. Fix grid ranges, enable 0.5 step, or reverse axis in Settings\n6. Settings are saved automatically\n7. Export PDF or EXCEL reports from top bar"
         }
     };
 
@@ -414,6 +433,7 @@
     const revX = document.getElementById('revX');
     const revY = document.getElementById('revY');
     const halfStepMode = document.getElementById('halfStepMode');
+    const mapImgSize = document.getElementById('mapImgSize'); 
     
     const exportBtn = document.getElementById('uiBtnExport');
     const exportBtnExcel = document.getElementById('uiBtnExportExcel');
@@ -424,10 +444,66 @@
     let isMapDragging = false, mapStartX = 0, mapStartY = 0, initialPinchDist = null, initialZoom = 1;
     let lastRenderedPointBoxes = [];
 
-    // --- 輔助函數：英數轉換 ---
+    function saveSettings() {
+        const s = {
+            userName: userName ? userName.value : '',
+            showUserInWM: showUserInWM ? showUserInWM.checked : true,
+            mapSpan: document.getElementById('mapSpan') ? document.getElementById('mapSpan').value : 11,
+            mapColSize: document.getElementById('mapColSize') ? document.getElementById('mapColSize').value : 1,
+            gridXStart: document.getElementById('gridXStart') ? document.getElementById('gridXStart').value : '',
+            gridXEnd: document.getElementById('gridXEnd') ? document.getElementById('gridXEnd').value : '',
+            gridYStart: document.getElementById('gridYStart') ? document.getElementById('gridYStart').value : '',
+            gridYEnd: document.getElementById('gridYEnd') ? document.getElementById('gridYEnd').value : '',
+            halfStepMode: halfStepMode ? halfStepMode.checked : false,
+            revX: revX ? revX.checked : false,
+            revY: revY ? revY.checked : false,
+            mapImgSize: mapImgSize ? mapImgSize.value : '1.0', 
+            sysTheme: sysTheme ? sysTheme.value : 'dark',
+            sysLang: sysLang ? sysLang.value : 'zh',
+            wmColor: wmColor ? wmColor.value : '#FFD60A',
+            wmSize: wmSize ? wmSize.value : '1.0',
+            wmPosition: wmPosition ? wmPosition.value : 'bottom'
+        };
+        localStorage.setItem('rtdc_settings', JSON.stringify(s));
+    }
+
+    function loadSettings() {
+        const saved = localStorage.getItem('rtdc_settings');
+        if (saved) {
+            try {
+                const s = JSON.parse(saved);
+                if(s.userName !== undefined && userName) userName.value = s.userName;
+                if(s.showUserInWM !== undefined && showUserInWM) showUserInWM.checked = s.showUserInWM;
+                if(s.mapSpan !== undefined && document.getElementById('mapSpan')) document.getElementById('mapSpan').value = s.mapSpan;
+                if(s.mapColSize !== undefined && document.getElementById('mapColSize')) document.getElementById('mapColSize').value = s.mapColSize;
+                if(s.gridXStart !== undefined && document.getElementById('gridXStart')) document.getElementById('gridXStart').value = s.gridXStart;
+                if(s.gridXEnd !== undefined && document.getElementById('gridXEnd')) document.getElementById('gridXEnd').value = s.gridXEnd;
+                if(s.gridYStart !== undefined && document.getElementById('gridYStart')) document.getElementById('gridYStart').value = s.gridYStart;
+                if(s.gridYEnd !== undefined && document.getElementById('gridYEnd')) document.getElementById('gridYEnd').value = s.gridYEnd;
+                if(s.halfStepMode !== undefined && halfStepMode) halfStepMode.checked = s.halfStepMode;
+                if(s.revX !== undefined && revX) revX.checked = s.revX;
+                if(s.revY !== undefined && revY) revY.checked = s.revY;
+                if(s.mapImgSize !== undefined && mapImgSize) { 
+                    mapImgSize.value = s.mapImgSize;
+                    const valEl = document.getElementById('mapImgSizeVal');
+                    if(valEl) valEl.innerText = s.mapImgSize + 'x';
+                }
+                if(s.sysTheme !== undefined && sysTheme) sysTheme.value = s.sysTheme;
+                if(s.sysLang !== undefined && sysLang) sysLang.value = s.sysLang;
+                if(s.wmColor !== undefined && wmColor) wmColor.value = s.wmColor;
+                if(s.wmSize !== undefined && wmSize) {
+                    wmSize.value = s.wmSize;
+                    const valEl = document.getElementById('wmSizeVal');
+                    if(valEl) valEl.innerText = s.wmSize + 'x';
+                }
+                if(s.wmPosition !== undefined && wmPosition) wmPosition.value = s.wmPosition;
+            } catch(e) { console.error('Failed to load settings', e); }
+        }
+    }
+
     function engToNum(eng) {
         if(!eng) return 0;
-        let yMatch = eng.match(/^([A-Z]+)(\.\d+)?$/);
+        let yMatch = String(eng).toUpperCase().replace(',', '.').match(/^([A-Z]+)(\.\d+)?$/);
         if(yMatch) {
             let yStr = yMatch[1], yDec = yMatch[2] ? parseFloat(yMatch[2]) : 0, y = 0; 
             for(let c=0; c<yStr.length; c++) { y = y * 26 + (yStr.charCodeAt(c) - 64); }
@@ -435,6 +511,7 @@
         }
         return 0;
     }
+    
     function numToEng(num) {
         let yInt = Math.floor(num);
         let isHalf = num % 1 !== 0;
@@ -461,6 +538,7 @@
     }
 
     window.onload = async () => {
+        loadSettings(); 
         applyLanguage(); applyTheme(); initIndexedDB();
         try { 
             stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } }); 
@@ -475,7 +553,6 @@
             mContainer.addEventListener('touchmove', handleMapTouchMove, {passive: false});
             mContainer.addEventListener('touchend', handleMapTouchEnd);
             
-            // 🖱️ 支援電腦版滑鼠拖曳
             mContainer.addEventListener('mousedown', (e) => {
                 isMapDragging = true;
                 mapStartX = e.clientX - mapPanX;
@@ -489,6 +566,7 @@
                 renderMap();
             });
             window.addEventListener('mouseup', () => { isMapDragging = false; mContainer.style.cursor = 'crosshair'; });
+            window.addEventListener('mouseleave', () => { isMapDragging = false; mContainer.style.cursor = 'crosshair'; });
             
             mContainer.addEventListener('wheel', handleMapWheel, {passive: false});
             mContainer.addEventListener('click', handleMapClick); 
@@ -527,7 +605,7 @@
         posFloor.placeholder = txt.phFloor; posNum.placeholder = txt.phNum; posEng.placeholder = txt.phEng; remarkInput.placeholder = txt.phRemark; userName.placeholder = txt.phUser;
         ['dirNone','dirE','dirW','dirS','dirN','dirC'].forEach(id => { let el = document.getElementById(id); if(el) el.innerText = txt[id]; });
         
-        const labels = ['uiBtnMap', 'uiBtnUndo', 'uiModalTitle', 'lblUser', 'lblShowUser', 'lblMapSpan', 'lblMapCol', 'lblMapGridX', 'lblMapGridY', 'lblHalfStep', 'lblMapDir', 'lblRevX', 'lblRevY', 'lblLang', 'lblTheme', 'lblColor', 'lblSize', 'lblPos', 'uiBtnDone', 'uiMapTitle', 'uiBtnCloseMap', 'uiBtnHelp', 'uiBtnClear', 'uiHelpTitle', 'uiBtnCloseHelp', 'uiBtnCloseViewer'];
+        const labels = ['uiBtnMap', 'uiBtnUndo', 'uiModalTitle', 'lblUser', 'lblShowUser', 'lblMapSpan', 'lblMapCol', 'lblMapGridX', 'lblMapGridY', 'lblHalfStep', 'lblMapDir', 'lblRevX', 'lblRevY', 'lblMapImgSize', 'lblLang', 'lblTheme', 'lblColor', 'lblSize', 'lblPos', 'uiBtnDone', 'uiMapTitle', 'uiBtnCloseMap', 'uiBtnHelp', 'uiBtnClear', 'uiHelpTitle', 'uiBtnCloseHelp', 'uiBtnCloseViewer'];
         labels.forEach(id => { let el = document.getElementById(id); if(el) el.innerText = txt[id]; });
         
         let helpContent = document.getElementById('uiHelpContent'); if(helpContent) helpContent.innerHTML = txt.uiHelpContent.replace(/\n/g, '<br>');
@@ -556,7 +634,7 @@
     }
 
     function openSettings() { document.getElementById('settingsModal').style.display = 'flex'; }
-    function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
+    function closeSettings() { saveSettings(); document.getElementById('settingsModal').style.display = 'none'; }
     function openHelp() { document.getElementById('helpModal').style.display = 'flex'; }
     function closeHelp() { document.getElementById('helpModal').style.display = 'none'; }
 
@@ -656,10 +734,11 @@
 
         const customSpan = parseFloat(document.getElementById('mapSpan').value) || 11;
         const customColSize = parseFloat(document.getElementById('mapColSize').value) || 1;
-        const isRevX = document.getElementById('revX').checked;
-        const isRevY = document.getElementById('revY').checked;
+        const isRevX = revX && revX.checked;
+        const isRevY = revY && revY.checked;
         const useHalfStep = halfStepMode && halfStepMode.checked;
         const gridStep = useHalfStep ? 0.5 : 1;
+        const imgScale = mapImgSize ? parseFloat(mapImgSize.value) : 1.0;
         
         let points = [];
         let dataMinX = Infinity, dataMaxX = -Infinity, dataMinY = Infinity, dataMaxY = -Infinity;
@@ -680,11 +759,10 @@
             }
         });
 
-        // 📏 套用自訂網格範圍
         let userMinX = parseFloat(document.getElementById('gridXStart').value);
         let userMaxX = parseFloat(document.getElementById('gridXEnd').value);
-        let userMinY = engToNum(document.getElementById('gridYStart').value.trim().toUpperCase());
-        let userMaxY = engToNum(document.getElementById('gridYEnd').value.trim().toUpperCase());
+        let userMinY = engToNum(document.getElementById('gridYStart').value);
+        let userMaxY = engToNum(document.getElementById('gridYEnd').value);
 
         let minX = !isNaN(userMinX) ? userMinX : dataMinX;
         let maxX = !isNaN(userMaxX) ? userMaxX : dataMaxX;
@@ -700,15 +778,14 @@
             lastRenderedPointBoxes = []; return;
         }
 
-        // 🚀 精準邊界：完全不加 1，輸入 30 就到 30
         minX = Math.floor(minX); maxX = Math.ceil(maxX); 
         minY = Math.floor(minY); maxY = Math.ceil(maxY);
         
         let gridW = maxX - minX; let gridH = maxY - minY;
         if(gridW <= 0) gridW = 1; if(gridH <= 0) gridH = 1;
 
-        const padX = isExport ? 200 * dpr : cvs.width * 0.15; 
-        const padY = isExport ? 200 * dpr : cvs.height * 0.15;
+        const padX = isExport ? 250 * dpr : cvs.width * 0.15; 
+        const padY = isExport ? 250 * dpr : cvs.height * 0.15;
         const baseScale = Math.min((cvs.width - padX * 2) / gridW, (cvs.height - padY * 2) / gridH); 
         
         let z = isExport ? 1 : mapZoom;
@@ -729,8 +806,7 @@
             return { sx: cx + plotX * baseScale, sy: cy + plotY * baseScale }; 
         }
 
-        // 1. 畫網格 (支援 0.5 step)
-        ctx.strokeStyle = gridLineColor; ctx.lineWidth = (2 * dpr) / z; ctx.beginPath();
+        ctx.strokeStyle = gridLineColor; ctx.lineWidth = (1.5 * dpr) / z; ctx.beginPath();
         let stepsX = Math.round((maxX - minX) / gridStep);
         let stepsY = Math.round((maxY - minY) / gridStep);
 
@@ -746,7 +822,6 @@
         }
         ctx.stroke();
 
-        // 2. 畫柱子與標籤
         let colSizeRender = baseScale * (customColSize / customSpan); 
         ctx.fillStyle = columnColor;
         let labelEdgeY = isRevY ? maxY : minY;
@@ -758,7 +833,6 @@
                 let y = minY + j * gridStep;
                 let p = getScreenPt(x, y); 
                 
-                // 只在整數座標畫柱子
                 if(x % 1 === 0 && y % 1 === 0) {
                     ctx.fillRect(p.sx - colSizeRender/2, p.sy - colSizeRender/2, colSizeRender, colSizeRender);
                 }
@@ -776,13 +850,20 @@
             }
         }
 
-        // 3. 🚀 智慧放射狀排版 (防照片重疊)
-        const imgW = (80 * dpr) / z; const imgH = (60 * dpr) / z;
+        const imgW = (80 * imgScale * dpr) / z; 
+        const imgH = (60 * imgScale * dpr) / z;
         const boxes = [];
-        const labelH = (16 * dpr) / z; const fontSize = (11 * dpr) / z;
+        const labelH = (16 * imgScale * dpr) / z; 
+        const fontSize = (11 * imgScale * dpr) / z;
         
-        // 將防禦力場拉大，絕對不壓圖
-        const gridBox = { x: cx - (80*dpr)/z, y: cy - (80*dpr)/z, w: (gridW*baseScale)+(160*dpr)/z, h: (gridH*baseScale)+(160*dpr)/z };
+        // 🚀 隱形防護力場 (加上 30px Margin，照片絕對不壓網格)
+        const marginX = (30 * dpr) / z; 
+        const marginY = (30 * dpr) / z; 
+        const forbidX1 = cx - marginX;
+        const forbidX2 = cx + (gridW * baseScale) + marginX;
+        const forbidY1 = cy - marginY;
+        const forbidY2 = cy + (gridH * baseScale) + marginY;
+
         const mapCenterX = cx + (gridW * baseScale) / 2;
         const mapCenterY = cy + (gridH * baseScale) / 2;
 
@@ -792,35 +873,39 @@
         for (let pt of points) {
             let pScreen = getScreenPt(pt.x, pt.y);
             
-            // 🚀 向量發散角：讓照片往平面的外側尋找空位，避免引線交叉
             let dx = pScreen.sx - mapCenterX;
             let dy = pScreen.sy - mapCenterY;
             if(dx === 0 && dy === 0) { dx = 1; dy = 1; }
-            let angle = Math.atan2(dy, dx) + (pt.num * 0.15); // 加入微小發散偏移
+            let baseAngle = Math.atan2(dy, dx); 
 
-            let r = Math.max((gridW*baseScale)/2, (gridH*baseScale)/2); // 從網格外開始找
+            // 🚀 緊湊排版：從原點開始尋找
+            let r = 0; 
             let placed = false, bestBox = null;
-            let spiralStep = (15 * dpr) / z;
+            let angleOffset = 0;
+            let spiralStep = (8 * dpr) / z; 
 
             while (!placed && r < 8000 * dpr) {
-                let tx = pScreen.sx + r * Math.cos(angle); 
-                let ty = pScreen.sy + r * Math.sin(angle);
+                let tx = pScreen.sx + r * Math.cos(baseAngle + angleOffset); 
+                let ty = pScreen.sy + r * Math.sin(baseAngle + angleOffset);
                 let box = { x: tx - imgW/2, y: ty - imgH/2, w: imgW, h: imgH };
+                let boxFull = { x: box.x, y: box.y - labelH, w: box.w, h: box.h + labelH };
+
+                let collide = (boxFull.x + boxFull.w > forbidX1 && boxFull.x < forbidX2 && boxFull.y + boxFull.h > forbidY1 && boxFull.y < forbidY2);
                 
-                // 檢查是否壓到平面圖防禦力場
-                let collide = (box.x < gridBox.x + gridBox.w && box.x + box.w > gridBox.x && box.y < gridBox.y + gridBox.h && box.y + box.h > gridBox.y);
-                
-                // 檢查是否與其他照片重疊 (加上 15px 緩衝區)
                 if (!collide) { 
                     for(let b of boxes) { 
-                        if(box.x < b.x + b.w + (15*dpr)/z && box.x + box.w + (15*dpr)/z > b.x && box.y < b.y + b.h + (labelH+15*dpr)/z && box.y + box.h + (15*dpr)/z > b.y) { 
+                        let margin = (10*dpr)/z;
+                        let bFull = { x: b.x, y: b.y - b.labelH, w: b.w, h: b.h + b.labelH };
+                        if(boxFull.x < bFull.x + bFull.w + margin && boxFull.x + boxFull.w + margin > bFull.x && 
+                           boxFull.y < bFull.y + bFull.h + margin && boxFull.y + boxFull.h + margin > bFull.y) { 
                             collide = true; break; 
                         } 
                     } 
                 }
                 
-                if (!collide) { bestBox = box; placed = true; }
-                angle += 0.1; r += spiralStep; // 螺旋向外推
+                if (!collide) { bestBox = { ...box, labelH: labelH }; placed = true; }
+                angleOffset += 0.2; 
+                r += spiralStep; 
             }
 
             if (bestBox) {
@@ -831,7 +916,7 @@
 
                 ctx.beginPath(); ctx.arc(pScreen.sx, pScreen.sy, (4 * dpr)/z, 0, Math.PI * 2); ctx.fillStyle = '#FF3B30'; ctx.fill();
 
-                const cornerR = (8 * dpr) / z; const totalH = bestBox.h + labelH; const topY = bestBox.y - labelH;
+                const cornerR = (8 * imgScale * dpr) / z; const totalH = bestBox.h + labelH; const topY = bestBox.y - labelH;
 
                 ctx.fillStyle = isLight ? '#ffffff' : '#1c1c1e';
                 ctx.beginPath();
@@ -862,7 +947,6 @@
         ctx.restore();
     }
 
-    // --- 相機拍攝與匯出 ---
     [posFloor, posNum, posEng, remarkInput].forEach(el => el.addEventListener('input', () => { if(el.id === 'posEng') el.value = el.value.toUpperCase(); updateWatermarkPreview(); }));
 
     function updateWatermarkPreview() {
@@ -903,7 +987,6 @@
         if (!video.videoWidth) return;
         const txt = i18n[sysLang.value];
         const fl = posFloor.value.trim(), num = posNum.value.trim(), eng = posEng.value.trim(), rm = remarkInput.value.trim();
-        if (!fl && !num && !eng) if(!confirm(txt.confirmNoPos)) return;
 
         canvas.width = 1024; canvas.height = 768;
         const targetAspect = 1024 / 768, zw = video.videoWidth / currentZoom, zh = video.videoHeight / currentZoom;
